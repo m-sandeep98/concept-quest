@@ -1,0 +1,69 @@
+{
+  "shape": "sequence",
+  "themes": ["ship-it", "bake-a-cake"],
+  "spine": ["order-matters", "prerequisite", "the-chain", "boss-pipeline"],
+  "nodes": [
+    {
+      "id": "order-matters",
+      "type": "level",
+      "concept": "order matters",
+      "tier": 1,
+      "prereqs": [],
+      "shape": "sequence",
+      "level": { "steps": [{ "id": "s2", "needs": ["s1"] }, { "id": "s3", "needs": ["s2"] }, { "id": "s1", "needs": [] }] },
+      "failureModes": []
+    },
+    {
+      "id": "prerequisite",
+      "type": "level",
+      "concept": "prerequisites",
+      "tier": 2,
+      "prereqs": ["order-matters"],
+      "shape": "sequence",
+      "level": { "steps": [{ "id": "s4", "needs": ["s2"] }, { "id": "s2", "needs": ["s1"] }, { "id": "s1", "needs": [] }, { "id": "s3", "needs": ["s1"] }] },
+      "failureModes": [
+        { "signal": { "tag": "dependency-violation", "minCount": 2 }, "gap": "prerequisites", "remediation": "sidequest:missing-foundation" },
+        { "signal": { "tag": "wrong-start", "minCount": 2 }, "gap": "the starting point", "remediation": "generate:find-the-start-drill" }
+      ]
+    },
+    {
+      "id": "the-chain",
+      "type": "level",
+      "concept": "the whole chain",
+      "tier": 3,
+      "prereqs": ["prerequisite"],
+      "shape": "sequence",
+      "level": { "steps": [{ "id": "s5", "needs": ["s3", "s4"] }, { "id": "s3", "needs": ["s2"] }, { "id": "s1", "needs": [] }, { "id": "s4", "needs": ["s2"] }, { "id": "s2", "needs": ["s1"] }] },
+      "failureModes": [
+        { "signal": { "tag": "dependency-violation", "minCount": 2 }, "gap": "prerequisites", "remediation": "sidequest:missing-foundation" },
+        { "signal": { "tag": "wrong-start", "minCount": 2 }, "gap": "the starting point", "remediation": "generate:find-the-start-drill" }
+      ]
+    },
+    {
+      "id": "boss-pipeline",
+      "type": "boss",
+      "concept": "assemble the whole process",
+      "tier": 4,
+      "prereqs": ["the-chain"],
+      "shape": "sequence",
+      "level": { "steps": [{ "id": "s6", "needs": ["s4", "s5"] }, { "id": "s2", "needs": ["s1"] }, { "id": "s4", "needs": ["s2"] }, { "id": "s1", "needs": [] }, { "id": "s5", "needs": ["s3"] }, { "id": "s3", "needs": ["s1"] }] },
+      "failureModes": [
+        { "signal": { "tag": "dependency-violation", "minCount": 2 }, "gap": "prerequisites", "remediation": "sidequest:missing-foundation" },
+        { "signal": { "tag": "wrong-start", "minCount": 2 }, "gap": "the starting point", "remediation": "generate:find-the-start-drill" }
+      ]
+    },
+    {
+      "id": "missing-foundation",
+      "type": "sidequest",
+      "concept": "prerequisites",
+      "tier": 2,
+      "prereqs": [],
+      "hidden": true,
+      "remediates": "prerequisite",
+      "clearsGap": "prerequisites",
+      "shape": "sequence",
+      "level": { "steps": [{ "id": "s2", "needs": ["s1"] }, { "id": "s3", "needs": ["s1"] }, { "id": "s1", "needs": [] }] },
+      "failureModes": []
+    }
+  ]
+}

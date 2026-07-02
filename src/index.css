@@ -29,6 +29,10 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--acce
 .app-header h1 { margin: 0; font-size: 30px; letter-spacing: -0.02em; }
 .app-sub { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
 .app-sub strong { color: var(--text); }
+.domain-switch { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+.domain-btn { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 7px 14px; border-radius: 10px; cursor: pointer; font-size: 14px; transition: 0.15s; }
+.domain-btn:hover { border-color: var(--accent); }
+.domain-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 
 .app-msg { text-align: center; padding: 80px 20px; color: var(--muted); }
 .app-msg.error { color: var(--bad); }

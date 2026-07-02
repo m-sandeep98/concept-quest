@@ -16,9 +16,14 @@ import {
   type Ticket,
 } from "./shell/progress";
 
-const SHAPE = "recursive-descent";
+// Each domain is one archetype's content. Adding a game type surfaces here as one entry.
+const DOMAINS = [
+  { shape: "recursive-descent", label: "🌀 Recursion" },
+  { shape: "sequence", label: "📋 Sequence / Process" },
+];
 
 export default function App() {
+  const [shapeId, setShapeId] = useState(DOMAINS[0].shape);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [themeId, setThemeId] = useState("");
@@ -27,21 +32,33 @@ export default function App() {
   const [modalTicket, setModalTicket] = useState<Ticket | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Load the selected domain's content graph + themes.
   useEffect(() => {
-    loadDomain(SHAPE)
+    let cancelled = false;
+    setGraph(null);
+    setError(null);
+    setView({ mode: "map" });
+    loadDomain(shapeId)
       .then(({ graph, themes }) => {
+        if (cancelled) return;
         setGraph(graph);
         setThemes(themes);
         const first = themes[0]?.id ?? "";
         setThemeId(first);
-        setProgress(loadProgress(SHAPE, first));
+        setProgress(loadProgress(shapeId, first));
       })
-      .catch((e) => setError(String(e)));
-  }, []);
+      .catch((e) => !cancelled && setError(String(e)));
+    return () => {
+      cancelled = true;
+    };
+  }, [shapeId]);
 
+  // Persist progress (only once the current theme belongs to the loaded domain).
   useEffect(() => {
-    if (themeId) saveProgress(SHAPE, themeId, progress);
-  }, [themeId, progress]);
+    if (graph && themeId && themes.some((t) => t.id === themeId)) {
+      saveProgress(shapeId, themeId, progress);
+    }
+  }, [shapeId, themeId, themes, graph, progress]);
 
   if (error) return <div className="app-msg error">Failed to load content: {error}</div>;
   if (!graph || !themeId) return <div className="app-msg">Loading…</div>;
@@ -51,7 +68,7 @@ export default function App() {
 
   function switchTheme(id: string) {
     setThemeId(id);
-    setProgress(loadProgress(SHAPE, id));
+    setProgress(loadProgress(shapeId, id));
     setView({ mode: "map" });
   }
 
@@ -72,7 +89,7 @@ export default function App() {
   function resetProgress() {
     const fresh = freshProgress();
     setProgress(fresh);
-    saveProgress(SHAPE, themeId, fresh);
+    saveProgress(shapeId, themeId, fresh);
     setView({ mode: "map" });
   }
 
@@ -83,6 +100,17 @@ export default function App() {
         <p className="app-sub">
           archetype <code>{graph.shape}</code> · now teaching <strong>{theme.subject}</strong>
         </p>
+        <div className="domain-switch">
+          {DOMAINS.map((d) => (
+            <button
+              key={d.shape}
+              className={`domain-btn ${d.shape === shapeId ? "on" : ""}`}
+              onClick={() => setShapeId(d.shape)}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
       </header>
 
       {view.mode === "map" ? (
@@ -98,7 +126,7 @@ export default function App() {
         />
       ) : (
         <GameHost
-          key={`${themeId}:${view.nodeId}`}
+          key={`${shapeId}:${themeId}:${view.nodeId}`}
           node={nodeById(view.nodeId)}
           theme={theme}
           gameModule={getModule(nodeById(view.nodeId).shape)}
@@ -109,7 +137,7 @@ export default function App() {
         />
       )}
 
-      {modalTicket && <TicketModal ticket={modalTicket} shape={SHAPE} onClose={() => setModalTicket(null)} />}
+      {modalTicket && <TicketModal ticket={modalTicket} shape={shapeId} onClose={() => setModalTicket(null)} />}
     </div>
   );
 }

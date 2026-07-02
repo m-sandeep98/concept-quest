@@ -50,6 +50,8 @@ export interface ThemeNode {
   hook: string;
   winText: string;
   failText?: Record<string, string>;
+  /** Archetype-specific per-node theme data (e.g. sequence step labels). The shell ignores it; the archetype interprets it. */
+  extra?: Record<string, unknown>;
 }
 
 export interface Theme {
@@ -59,10 +61,11 @@ export interface Theme {
   bossHook: string;
   vocab: Record<string, string>;
   visual: {
+    // Shell reads accent + actorIcon; the rest is archetype-specific.
     accent: string;
-    containerShape: "square" | "round";
-    coreIcon: string;
     actorIcon: string;
+    containerShape?: "square" | "round";
+    coreIcon?: string;
   };
   nodes: Record<string, ThemeNode>;
 }

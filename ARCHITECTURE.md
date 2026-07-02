@@ -24,7 +24,7 @@ The scalability bet. An archetype is keyed to a concept's **shape**, not its sub
 | Shape | Archetype | Subjects |
 |---|---|---|
 | self-similar / nesting | **recursive-descent** (built) | recursion, fractals, nested stories, taxonomy |
-| sequence / process | timeline | history, digestion, an algorithm |
+| sequence / process | **sequence** (built) | build pipelines, recipes, history, an algorithm |
 | cause → effect | chain/graph builder | causation, ecosystems |
 | classify / group | sorting arena | taxonomy, parts of speech |
 | trade-off / resource | balance | economics, ecology |
@@ -72,8 +72,22 @@ interface GameProps<L> {
 The map, progress, gap engine, tickets, and theming are untouched. Each archetype may render however it
 needs (DOM/SVG/Canvas/Phaser) behind the same contract.
 
+### What adding archetype #2 (`sequence`) actually cost
+
+Building a genuinely different second game (order steps into a valid dependency order; a step run before
+its prerequisite visibly breaks) was the real test of the contract. The result:
+
+- **Shell logic files unchanged** — `Map`, `GameHost`, `progress`, `contentLoader` didn't move.
+- **One additive contract change** — `ThemeNode.extra` (a per-node bag) so a theme can carry
+  archetype-specific data (here: step labels). Recursion-specific `visual` fields became optional.
+- **One app-level addition** — a domain picker in `App.tsx` so you can navigate between archetypes.
+  That's product navigation, not the archetype contract.
+- Same proof repeated: `sequence` ships **two subjects over one `graph.json`** — *Ship It* (a build
+  pipeline) and *Bake a Cake* (a recipe) share the identical dependency DAG per node. Gap signals
+  (`wrong-start`, `dependency-violation`) come from play states; both engines are unit-tested.
+
 ## Known limits of this slice
 
-- Rule order isn't enforced (base case is always checked first by the engine); fine for v1.
-- One archetype, one domain. The point is the *contract*, not breadth.
+- Rule/step order rules are light (recursion checks the base case first regardless of block order); fine for v1.
+- Two archetypes so far — enough to prove the contract generalizes across *shapes*, not just themes.
 - Ticket generation is simulated (the modal) — wiring it to a real Claude Code kanban run is the next step.

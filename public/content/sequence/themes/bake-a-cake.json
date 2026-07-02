@@ -1,0 +1,82 @@
+{
+  "id": "bake-a-cake",
+  "label": "Bake a Cake",
+  "subject": "Baking a cake (a recipe)",
+  "bossHook": "Turn a pile of ingredients into a finished, frosted cake — in an order that doesn't collapse.",
+  "vocab": { "run": "Serve it 🍰" },
+  "visual": { "accent": "#e0793a", "actorIcon": "🧑‍🍳" },
+  "nodes": {
+    "order-matters": {
+      "title": "First Things First",
+      "hook": "You can't bake a batter you haven't mixed. Put these three in a working order.",
+      "winText": "Mix → bake → serve. Order matters: each step depends on the one before it.",
+      "extra": { "steps": {
+        "s1": { "label": "Mix the batter", "icon": "🥣" },
+        "s2": { "label": "Bake it", "icon": "🔥" },
+        "s3": { "label": "Serve a slice", "icon": "🍰" }
+      } }
+    },
+    "prerequisite": {
+      "title": "The Foundation",
+      "hook": "Some steps unlock others. Find the one thing that has to happen first, then build on it.",
+      "winText": "Gathering the ingredients came first — batter and frosting both needed them. That's a prerequisite.",
+      "failText": {
+        "wrong-start": "You started with a step that needs something else first. Begin with what needs nothing — the ingredients.",
+        "dependency-violation": "That step ran before its prerequisite existed. Put the thing it needs earlier."
+      },
+      "extra": { "steps": {
+        "s1": { "label": "Gather ingredients", "icon": "🧺" },
+        "s2": { "label": "Make the batter", "icon": "🥣" },
+        "s3": { "label": "Make the frosting", "icon": "🍥" },
+        "s4": { "label": "Bake the batter", "icon": "🔥" }
+      } }
+    },
+    "the-chain": {
+      "title": "The Whole Chain",
+      "hook": "Make batter, pour it into two tins, then bake both layers. Some steps wait on others; trace the chain.",
+      "winText": "Both tins waited on the batter, and baking waited on both being filled. You traced the whole chain.",
+      "failText": {
+        "wrong-start": "Start with the step that needs nothing.",
+        "dependency-violation": "You baked or poured before the batter it depends on existed."
+      },
+      "extra": { "steps": {
+        "s1": { "label": "Gather ingredients", "icon": "🧺" },
+        "s2": { "label": "Make the batter", "icon": "🥣" },
+        "s3": { "label": "Pour into tin A", "icon": "🧁" },
+        "s4": { "label": "Pour into tin B", "icon": "🧁" },
+        "s5": { "label": "Bake both layers", "icon": "🔥" }
+      } }
+    },
+    "boss-pipeline": {
+      "title": "BOSS · The Finished Cake",
+      "hook": "Six steps, two branches that must converge. Take raw ingredients to a frosted, served cake.",
+      "winText": "Cake served. Batter and frosting both branched off the ingredients, then converged at assembly. Same shape as the build pipeline — different subject.",
+      "failText": {
+        "wrong-start": "Begin with the step that needs nothing — gathering the ingredients.",
+        "dependency-violation": "A step ran before something it depends on. Trace what each one needs."
+      },
+      "extra": { "steps": {
+        "s1": { "label": "Gather ingredients", "icon": "🧺" },
+        "s2": { "label": "Make the batter", "icon": "🥣" },
+        "s3": { "label": "Make the frosting", "icon": "🍥" },
+        "s4": { "label": "Bake the cake", "icon": "🔥" },
+        "s5": { "label": "Whip the frosting", "icon": "🌀" },
+        "s6": { "label": "Assemble & serve", "icon": "🍰" }
+      } }
+    },
+    "missing-foundation": {
+      "title": "SIDE-QUEST · Foundation First",
+      "hook": "You keep cooking before you have what you need. Drill it: place the ONE step everything else needs, first.",
+      "winText": "Ingredients first, then the rest. The foundation is whatever needs nothing and unlocks everything.",
+      "failText": {
+        "wrong-start": "Still starting in the wrong place — lead with the step that has no prerequisites.",
+        "dependency-violation": "Put the foundation before the steps that depend on it."
+      },
+      "extra": { "steps": {
+        "s1": { "label": "Gather ingredients", "icon": "🧺" },
+        "s2": { "label": "Make the batter", "icon": "🥣" },
+        "s3": { "label": "Make the frosting", "icon": "🍥" }
+      } }
+    }
+  }
+}

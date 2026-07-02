@@ -4,14 +4,15 @@ Gamify **any** concept into levels. A fixed game engine reads content-as-data; a
 themeable **game archetypes** turns concepts into things you *play*, not quizzes you answer.
 Claude Code is the authoring engine (offline); no LLM runs while you play.
 
-This repo is a **vertical slice**: one archetype (`recursive-descent`) running two subjects on the
-exact same engine and the same structural graph —
+This repo is a **vertical slice** with **two archetypes**, each running two subjects on the exact
+same engine and the same structural graph:
 
-- 🧙 **The Wizard's Well** — recursion, in code
-- 🪆 **The Nesting Dolls** — recursion, with no code at all
+- 🌀 **Recursive Descent** (shape: self-similar nesting) — 🧙 *Wizard's Well* (recursion in code) & 🪆 *Nesting Dolls* (no code)
+- 📋 **Sequence / Process** (shape: ordering + dependencies) — 🚀 *Ship It* (a build pipeline) & 🎂 *Bake a Cake* (a recipe)
 
-Switch between them in the app to see one mechanic teach two different subjects. That's the whole
-bet: **archetype = a concept's *shape*; theme = its *subject*.**
+Switch archetypes (top) and subjects (theme buttons) in the app to watch one mechanic teach different
+subjects, and two mechanics share one shell. That's the whole bet: **archetype = a concept's *shape*;
+theme = its *subject*.**
 
 ## Run it
 
@@ -39,20 +40,17 @@ src/
   types.ts                     # the GameModule contract + content-graph types
   archetypes/
     registry.ts                # shape -> archetype (add a game = add a line)
-    recursiveDescent/
-      engine.ts                # pure, deterministic recursion executor + failure detection
-      RecursiveDescent.tsx     # the playable game (build rule → run → animate)
-      module.ts                # GameModule: validate() + component
-  shell/                       # fixed engine, archetype-agnostic
+    recursiveDescent/          # archetype #1: engine.ts + RecursiveDescent.tsx + module.ts
+    sequence/                  # archetype #2: engine.ts + Sequence.tsx + module.ts + sequence.css
+  shell/                       # fixed engine, archetype-agnostic (unchanged across both archetypes)
     contentLoader.ts           # reads content-as-data at runtime
     progress.ts                # mastery, gap detection, tickets, localStorage
     Map.tsx                    # the ladder + theme switcher + ticket queue
     GameHost.tsx               # validates level data, mounts the archetype
     TicketModal.tsx            # the self-heal ticket demo
-public/content/recursive-descent/
-  graph.json                   # ONE theme-neutral structural graph
-  themes/wizard-well.json      # skin #1 (code)
-  themes/matryoshka.json       # skin #2 (no code)
+public/content/
+  recursive-descent/           # graph.json + themes/{wizard-well,matryoshka}.json
+  sequence/                    # graph.json + themes/{ship-it,bake-a-cake}.json
 schema/graph.schema.json       # what Claude Code authors against
 ```
 

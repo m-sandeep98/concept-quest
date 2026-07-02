@@ -80,7 +80,7 @@ export default function RecursiveDescent({
           <div className={`rd-well ${sawOverflow ? "overflow" : ""}`}>
             {phase === "build" ? (
               <div className="rd-well-idle">
-                <div className={`well-shell ${theme.visual.containerShape}`}>
+                <div className={`well-shell ${theme.visual.containerShape ?? "square"}`}>
                   <span className="well-depth">
                     {theme.vocab.depthLabel} = {level.startDepth}
                   </span>
@@ -180,11 +180,11 @@ function Nest({
   theme: Theme;
 }) {
   if (idx >= stack.length) {
-    const icon = sawOverflow ? "🕳️" : sawBase ? theme.visual.coreIcon : theme.visual.actorIcon;
+    const icon = sawOverflow ? "🕳️" : sawBase ? (theme.visual.coreIcon ?? "◎") : theme.visual.actorIcon;
     return <div className="well-core">{icon}</div>;
   }
   return (
-    <div className={`well-shell ${theme.visual.containerShape}`}>
+    <div className={`well-shell ${theme.visual.containerShape ?? "square"}`}>
       <span className="well-depth">
         {theme.vocab.depthLabel} = {stack[idx]}
       </span>
