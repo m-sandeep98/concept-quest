@@ -127,4 +127,16 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+server.on("error", (e) => {
+  if (e.code === "EADDRINUSE") {
+    console.error(
+      `✗ Port ${PORT} is already in use — another authoring server is probably still running.\n` +
+        `  Stop it:   lsof -ti :${PORT} | xargs kill\n` +
+        `  Or use another port:   PORT=8788 npm run server   (then update the Vite proxy in vite.config.ts to match)`
+    );
+    process.exit(1);
+  }
+  throw e;
+});
+
 server.listen(PORT, () => console.log(`🎫 Concept Quest authoring server → http://localhost:${PORT}  (queue: ${QUEUE})`));
