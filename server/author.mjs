@@ -295,13 +295,13 @@ function buildTopicPrompt(concept, seq, lastErr) {
     `- "sequence": ordering / process / dependencies (procedures, recipes, pipelines, histories, life cycles). PREFER THIS for most concepts.`,
     `- "recursive-descent": self-similar nesting (recursion, fractals, nested structures). Only if the concept literally nests inside itself.`,
     ``,
-    `Make a SMALL curriculum: 3-4 nodes — one intro level (prereqs []), 1-2 middle levels, ONE boss (highest tier) —`,
-    `each teaching ONE idea, with TRUE prerequisites (later depends on earlier). ONE theme naming everything for this`,
-    `concept. Keep all text short.`,
+    `Make a SMALL curriculum: 4-5 nodes — one intro level (prereqs []), 1-2 middle levels, ONE boss (highest tier),`,
+    `and ONE sidequest (type "sidequest", prereqs []) that reinforces the main idea — each teaching ONE idea, with`,
+    `TRUE prerequisites (later depends on earlier). ONE theme naming everything for this concept. Keep all text short.`,
     ``,
     `Return ONLY JSON, no markdown, no prose:`,
     `{"shape":"<shape>","label":"<emoji + short title>","graph":{"shape":"<shape>","themes":["<themeId>"],"spine":[<level ids>],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
-    `Node = {id,type:("level"|"boss"|"sidequest"),concept,tier:int,prereqs:[ids],shape,level,failureModes:[]}. Prereqs acyclic; theme covers EVERY node id.`,
+    `Node = {id,type:("level"|"boss"|"sidequest"),concept,tier:int,prereqs:[ids],shape,level,failureModes:[]}. Leave failureModes [] (added automatically). Prereqs acyclic; theme covers EVERY node id.`,
     ``,
     `If you choose "sequence", copy THIS working example's structure EXACTLY — node.level = {steps:[{id,needs:[ids]}]};`,
     `each theme node entry has extra.steps {"<stepId>":{"label","icon"}} for EVERY step id; theme has vocab.run + visual{accent,actorIcon}:`,
@@ -363,6 +363,44 @@ function validateGraph(shape, graph, themes) {
   }
 }
 
+// Each archetype emits a FIXED set of play-state signals. Rather than trust the
+// model to author correct tags, the server attaches the canonical failure modes
+// deterministically — so authored topics get a working self-heal loop for free.
+const FAILURE_MODES = {
+  sequence: [
+    { tag: "dependency-violation", minCount: 2, gap: "prerequisites", primary: true },
+    { tag: "wrong-start", minCount: 2, gap: "the starting point", remediation: "generate:find-the-start-drill" },
+  ],
+  "recursive-descent": [
+    { tag: "missing-base-case", minCount: 2, gap: "base case", primary: true },
+    { tag: "no-progress", minCount: 2, gap: "recursive case", remediation: "generate:shrinking-drill" },
+  ],
+};
+
+export function attachFailureModes(shape, graph) {
+  const specs = FAILURE_MODES[shape];
+  if (!specs) return;
+  const primaryGap = specs.find((s) => s.primary).gap;
+  const sidequest = graph.nodes.find((n) => n.type === "sidequest");
+  if (sidequest) {
+    sidequest.clearsGap = primaryGap;
+    if (!sidequest.remediates) {
+      const lvl = graph.nodes.find((n) => n.type === "level" && (n.prereqs || []).length > 0);
+      if (lvl) sidequest.remediates = lvl.id;
+    }
+  }
+  const primaryRemediation = sidequest ? `sidequest:${sidequest.id}` : `generate:${slug(primaryGap)}-drill`;
+  for (const n of graph.nodes) {
+    if (n.type === "sidequest") continue;
+    if ((n.prereqs || []).length === 0) continue; // the intro/root level stays gentle
+    n.failureModes = specs.map((s) => ({
+      signal: { tag: s.tag, minCount: s.minCount },
+      gap: s.gap,
+      remediation: s.primary ? primaryRemediation : s.remediation,
+    }));
+  }
+}
+
 export async function authorTopic(concept, root, attempts = 2) {
   let seq;
   try {
@@ -375,6 +413,7 @@ export async function authorTopic(concept, root, attempts = 2) {
     try {
       const parsed = parseJson(await runClaude(buildTopicPrompt(concept, seq, lastErr), 300000));
       const topic = normalizeTopic(concept, parsed);
+      attachFailureModes(topic.shape, topic.graph);
       validateGraph(topic.shape, topic.graph, topic.themes);
       return topic;
     } catch (e) {
