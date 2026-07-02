@@ -65,6 +65,13 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") return send(res, 204, {});
   const url = new URL(req.url, "http://localhost");
   try {
+    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/api")) {
+      return send(res, 200, {
+        service: "Concept Quest authoring server",
+        note: "This is the API only — open the game at http://localhost:5173",
+        endpoints: ["GET /api/health", "GET /api/tickets", "POST /api/tickets", "POST /api/tickets/:id/author", "DELETE /api/tickets/:id"],
+      });
+    }
     if (req.method === "GET" && url.pathname === "/api/health") return send(res, 200, { ok: true });
     if (req.method === "GET" && url.pathname === "/api/tickets") return send(res, 200, await listTickets());
 
@@ -121,7 +128,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true });
     }
 
-    send(res, 404, { error: "not found" });
+    send(res, 404, { error: "not found", hint: "This is the API server. Open the game at http://localhost:5173" });
   } catch (e) {
     send(res, 500, { error: String(e) });
   }
