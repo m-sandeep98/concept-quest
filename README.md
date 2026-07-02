@@ -14,6 +14,10 @@ Switch archetypes (top) and subjects (theme buttons) in the app to watch one mec
 subjects, and two mechanics share one shell. That's the whole bet: **archetype = a concept's *shape*;
 theme = its *subject*.**
 
+**And you can author your own.** Hit **＋ New Topic**, type any concept, and Claude Code picks the archetype
+whose shape fits and authors a whole validated game from scratch. The bundled `🏛️ How a Bill Becomes a Law`
+domain was authored this way, live, from the bare phrase.
+
 ## Run it
 
 ```bash

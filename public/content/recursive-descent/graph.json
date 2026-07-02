@@ -196,6 +196,33 @@
         ]
       },
       "failureModes": []
+    },
+    {
+      "id": "heal-recursive-case-2",
+      "type": "sidequest",
+      "concept": "recursive case",
+      "tier": 3,
+      "prereqs": [],
+      "hidden": true,
+      "remediates": "recursive-case",
+      "clearsGap": "recursive case",
+      "shape": "recursive-descent",
+      "authored": true,
+      "level": {
+        "startDepth": 2,
+        "preplaced": [
+          "stop"
+        ],
+        "palette": [
+          "descend",
+          "descendSame"
+        ],
+        "requiredBlocks": [
+          "stop",
+          "descend"
+        ]
+      },
+      "failureModes": []
     }
   ]
 }

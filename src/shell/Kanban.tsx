@@ -8,9 +8,11 @@ const SEED: Record<string, { gap: string; spec: string; source: string }> = {
 };
 
 export default function Kanban({
+  domain,
   shape,
   onAuthored,
 }: {
+  domain: string;
   shape: string;
   onAuthored: (nodeId: string) => void | Promise<void>;
 }) {
@@ -51,7 +53,7 @@ export default function Kanban({
 
   async function refresh() {
     try {
-      const mine = (await listTickets()).filter((t) => t.shape === shape);
+      const mine = (await listTickets()).filter((t) => t.domain === domain);
       setTickets(mine);
       setOnline(true);
       maybePump(mine);
@@ -65,7 +67,7 @@ export default function Kanban({
     const iv = setInterval(refresh, 2500);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shape]);
+  }, [domain]);
 
   function toggleAuto() {
     const v = !auto;
@@ -77,7 +79,7 @@ export default function Kanban({
   async function seed() {
     const s = SEED[shape];
     if (s) {
-      await postTicket(shape, { ...s, kind: "generate" });
+      await postTicket(domain, shape, { ...s, kind: "generate" });
       await refresh();
     }
   }
@@ -90,7 +92,7 @@ export default function Kanban({
   if (!online) {
     return (
       <div className="kanban offline">
-        🎫 Authoring server offline — run <code>npm run server</code> in a second terminal to enable the self-heal kanban.
+        🎫 Authoring server offline — run <code>npm run server</code> in a second terminal to enable the self-heal kanban and new topics.
       </div>
     );
   }
@@ -109,7 +111,7 @@ export default function Kanban({
           <label className={`auto-toggle ${auto ? "on" : ""}`}>
             <input type="checkbox" checked={auto} onChange={toggleAuto} /> Auto-author
           </label>
-          <button className="ktool" onClick={seed}>＋ seed test gap</button>
+          {SEED[shape] && <button className="ktool" onClick={seed}>＋ seed test gap</button>}
           <button className="ktool" onClick={clearDone}>clear done</button>
         </div>
       </div>

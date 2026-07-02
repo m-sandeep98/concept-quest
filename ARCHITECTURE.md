@@ -52,6 +52,26 @@ two themes over ONE `graph.json`** to prove it: `wizard-well` (code) and `matryo
   clones a known-valid node so the loop always closes. The "I don't get this" button is the manual hatch.
   The browser never calls an LLM — authoring is strictly offline.
 
+## 5. Whole-topic authoring — gamify anything
+
+The self-heal loop authors *one node*; the same pipeline, scaled up, authors a *whole domain* from a bare
+concept. `POST /api/topics {concept}` → Claude Code (`claude -p`) classifies the concept's shape, picks a
+registered archetype, and authors a full graph + theme. The server **validates the entire graph** (≥3
+nodes, one boss, a root with no prereqs, acyclic prereqs, every node valid for its archetype, theme covers
+every node) and **retries with the validation error fed back** if it's wrong — no silent bad content. It
+writes `content/<slug>/` and appends to `content/domains.json`; the app picks up the new playable domain.
+
+A **domain** (a content folder) is decoupled from its **archetype** (the `shape` that renders it), so a
+topic like `how-a-bill-becomes-a-law` uses the `sequence` archetype without being named after it. Heal
+tickets carry both `domain` (where to write) and `shape` (how to author).
+
+**Proof:** `how-a-bill-becomes-a-law` was authored live from the bare phrase in ~100s — a faithful bicameral
+DAG (draft → introduce → both chambers in parallel → President signs) — and is kept as a committed artifact.
+
+Limits: authored topics currently ship with empty `failureModes` (so the self-heal loop doesn't fire on them
+yet); authoring is a ~1-2 min `claude -p` call and only targets the two existing archetypes, so a concept
+that fits neither shape won't author well (which is what motivates archetypes #3+).
+
 ## The extensibility primitive: the `GameModule` contract
 
 The shell knows nothing about any specific game — only this (`src/types.ts`):

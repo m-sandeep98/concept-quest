@@ -1,0 +1,160 @@
+{
+  "id": "capitol-hill",
+  "label": "Capitol Hill",
+  "subject": "How a U.S. bill becomes a law",
+  "bossHook": "Take a bill from a rough draft, through both chambers of Congress, to the President's signature — in an order that actually works.",
+  "vocab": {
+    "run": "Make it law 🏛️"
+  },
+  "visual": {
+    "accent": "#2b4c8c",
+    "actorIcon": "📜"
+  },
+  "nodes": {
+    "bill-order": {
+      "title": "First Things First",
+      "hook": "A bill can't be voted on before it exists. Put these three in an order that works.",
+      "winText": "Draft → introduce → vote. Order matters: each step depends on the one before it.",
+      "extra": {
+        "steps": {
+          "s1": {
+            "label": "Draft the bill",
+            "icon": "📝"
+          },
+          "s2": {
+            "label": "Introduce it in Congress",
+            "icon": "🏛️"
+          },
+          "s3": {
+            "label": "Floor vote",
+            "icon": "🗳️"
+          }
+        }
+      }
+    },
+    "prerequisites": {
+      "title": "The Foundation",
+      "hook": "Some steps unlock others. Find the one thing that must happen first, then build on it.",
+      "winText": "The draft came first — you can't introduce or co-sponsor a bill that doesn't exist. That's a prerequisite.",
+      "failText": {
+        "wrong-start": "You started with a step that needs something else first. Begin with the draft — it needs nothing.",
+        "dependency-violation": "That step happened before its prerequisite. A bill can't move before it's drafted."
+      },
+      "extra": {
+        "steps": {
+          "s1": {
+            "label": "Draft the bill",
+            "icon": "📝"
+          },
+          "s2": {
+            "label": "Introduce it",
+            "icon": "🏛️"
+          },
+          "s3": {
+            "label": "Get co-sponsors",
+            "icon": "✍️"
+          },
+          "s4": {
+            "label": "Committee review",
+            "icon": "🔍"
+          }
+        }
+      }
+    },
+    "the-chain": {
+      "title": "Through Both Chambers",
+      "hook": "Introduce it, pass it in BOTH the House and the Senate, then send it to the President. Trace the chain.",
+      "winText": "The House and the Senate both passed it before it reached the President's desk. You traced the whole chain.",
+      "failText": {
+        "wrong-start": "Start with the step that needs nothing — draft the bill.",
+        "dependency-violation": "You passed or signed it before an earlier step existed. Trace what each step needs."
+      },
+      "extra": {
+        "steps": {
+          "s1": {
+            "label": "Draft the bill",
+            "icon": "📝"
+          },
+          "s2": {
+            "label": "Introduce it",
+            "icon": "🏛️"
+          },
+          "s3": {
+            "label": "House passes it",
+            "icon": "🔵"
+          },
+          "s4": {
+            "label": "Senate passes it",
+            "icon": "🔴"
+          },
+          "s5": {
+            "label": "President signs it",
+            "icon": "✒️"
+          }
+        }
+      }
+    },
+    "becomes-law": {
+      "title": "BOSS · Becomes a Law",
+      "hook": "Six steps, two chambers that must converge. Take a bill from a rough draft all the way to law.",
+      "winText": "The bill cleared both chambers in parallel, then converged on the President's signature. That's how a bill becomes a law.",
+      "failText": {
+        "wrong-start": "Begin with the step that needs nothing — draft the bill.",
+        "dependency-violation": "A step ran before something it depends on. Both chambers must pass it before the President can sign."
+      },
+      "extra": {
+        "steps": {
+          "s1": {
+            "label": "Draft the bill",
+            "icon": "📝"
+          },
+          "s2": {
+            "label": "House introduces it",
+            "icon": "🔵"
+          },
+          "s3": {
+            "label": "Senate introduces it",
+            "icon": "🔴"
+          },
+          "s4": {
+            "label": "House passes it",
+            "icon": "✅"
+          },
+          "s5": {
+            "label": "Senate passes it",
+            "icon": "✅"
+          },
+          "s6": {
+            "label": "President signs it into law",
+            "icon": "✒️"
+          }
+        }
+      }
+    },
+    "missing-foundation": {
+      "title": "SIDE-QUEST · Draft It First",
+      "hook": "You keep building before the bill exists. Drill it: place the ONE step everything else needs, first.",
+      "winText": "Draft first — everything else depends on it. The foundation is whatever needs nothing and unlocks the rest.",
+      "failText": {
+        "wrong-start": "Still starting in the wrong place — lead with the draft, which needs nothing.",
+        "dependency-violation": "Put the draft before the steps that depend on it."
+      },
+      "extra": {
+        "steps": {
+          "s1": {
+            "label": "Draft the bill",
+            "icon": "📝"
+          },
+          "s2": {
+            "label": "Introduce it",
+            "icon": "🏛️"
+          },
+          "s3": {
+            "label": "Assign to committee",
+            "icon": "🔍"
+          }
+        }
+      }
+    }
+  }
+}

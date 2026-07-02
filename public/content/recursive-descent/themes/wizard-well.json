@@ -63,6 +63,14 @@
       "failText": {
         "no-progress": "Your step re-cast on the SAME room (n stayed 2), so it never shrank and n = 0 never arrived — the well overflowed. The recursive case has to hand a SMALLER problem to the next call."
       }
+    },
+    "heal-recursive-case-2": {
+      "title": "Two Rooms Down",
+      "hook": "The STOP at n = 0 is already set — the base case is ready. All you need is the DESCEND that re-casts on a SMALLER room (n − 1). Just two rooms to the treasure.",
+      "winText": "n slid 2 → 1 → 0 and STOP grabbed 💎 at the bottom. A step that shrinks n toward the base case is the RECURSIVE CASE.",
+      "failText": {
+        "no-progress": "Your DESCEND re-cast on the SAME room, so n stayed 2 and the well overflowed. The recursive case has to hand a SMALLER room (n − 1) to the next cast."
+      }
     }
   }
 }

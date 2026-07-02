@@ -33,6 +33,13 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--acce
 .domain-btn { background: var(--panel); color: var(--text); border: 1px solid var(--line); padding: 7px 14px; border-radius: 10px; cursor: pointer; font-size: 14px; transition: 0.15s; }
 .domain-btn:hover { border-color: var(--accent); }
 .domain-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.domain-btn.new { border-style: dashed; color: var(--muted); }
+.domain-btn.new:hover { color: var(--text); border-color: var(--accent); }
+.topic-input { width: 100%; box-sizing: border-box; background: #0b0c16; border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; color: var(--text); font-size: 14px; margin: 6px 0; }
+.topic-input:focus { outline: none; border-color: var(--accent); }
+.topic-error { color: var(--bad); font-size: 13px; }
+.topic-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; align-items: center; }
+.topic-authoring { color: #b9a6ff; font-size: 13px; animation: pulse 1.2s ease-in-out infinite; }
 
 .app-msg { text-align: center; padding: 80px 20px; color: var(--muted); }
 .app-msg.error { color: var(--bad); }

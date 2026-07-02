@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import type { Graph, GraphNode, Theme } from "./types";
-import { loadDomain } from "./shell/contentLoader";
+import { loadDomain, loadDomainsIndex, type DomainEntry } from "./shell/contentLoader";
 import { getModule } from "./archetypes/registry";
 import QuestMap from "./shell/Map";
 import GameHost from "./shell/GameHost";
 import TicketModal from "./shell/TicketModal";
 import Kanban from "./shell/Kanban";
+import NewTopicModal from "./shell/NewTopicModal";
 import { postTicket } from "./shell/tickets";
 import {
   addManualTicket,
@@ -18,47 +19,53 @@ import {
   type Ticket,
 } from "./shell/progress";
 
-// Each domain is one archetype's content. Adding a game type surfaces here as one entry.
-const DOMAINS = [
-  { shape: "recursive-descent", label: "🌀 Recursion" },
-  { shape: "sequence", label: "📋 Sequence / Process" },
-];
-
 export default function App() {
-  const [shapeId, setShapeId] = useState(DOMAINS[0].shape);
+  const [domains, setDomains] = useState<DomainEntry[]>([]);
+  const [domainSlug, setDomainSlug] = useState("");
   const [graph, setGraph] = useState<Graph | null>(null);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [themeId, setThemeId] = useState("");
   const [progress, setProgress] = useState<Progress>(freshProgress());
   const [view, setView] = useState<{ mode: "map" } | { mode: "play"; nodeId: string }>({ mode: "map" });
   const [modalTicket, setModalTicket] = useState<Ticket | null>(null);
+  const [newTopicOpen, setNewTopicOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Which domains exist (new topics append here).
   useEffect(() => {
+    loadDomainsIndex().then((d) => {
+      setDomains(d);
+      setDomainSlug((cur) => cur || d[0]?.slug || "");
+    });
+  }, []);
+
+  // Load the selected domain's content graph + themes.
+  useEffect(() => {
+    if (!domainSlug) return;
     let cancelled = false;
     setGraph(null);
     setError(null);
     setView({ mode: "map" });
-    loadDomain(shapeId)
+    loadDomain(domainSlug)
       .then(({ graph, themes }) => {
         if (cancelled) return;
         setGraph(graph);
         setThemes(themes);
         const first = themes[0]?.id ?? "";
         setThemeId(first);
-        setProgress(loadProgress(shapeId, first));
+        setProgress(loadProgress(domainSlug, first));
       })
       .catch((e) => !cancelled && setError(String(e)));
     return () => {
       cancelled = true;
     };
-  }, [shapeId]);
+  }, [domainSlug]);
 
   useEffect(() => {
     if (graph && themeId && themes.some((t) => t.id === themeId)) {
-      saveProgress(shapeId, themeId, progress);
+      saveProgress(domainSlug, themeId, progress);
     }
-  }, [shapeId, themeId, themes, graph, progress]);
+  }, [domainSlug, themeId, themes, graph, progress]);
 
   if (error) return <div className="app-msg error">Failed to load content: {error}</div>;
   if (!graph || !themeId) return <div className="app-msg">Loading…</div>;
@@ -68,7 +75,7 @@ export default function App() {
 
   function switchTheme(id: string) {
     setThemeId(id);
-    setProgress(loadProgress(shapeId, id));
+    setProgress(loadProgress(domainSlug, id));
     setView({ mode: "map" });
   }
 
@@ -77,7 +84,7 @@ export default function App() {
     setProgress(next);
     if (newTicket) {
       setModalTicket(newTicket);
-      void postTicket(shapeId, newTicket); // hand the gap to the offline authoring server
+      void postTicket(domainSlug, graph!.shape, newTicket);
     }
     setView({ mode: "map" });
   }
@@ -86,14 +93,14 @@ export default function App() {
     const { progress: next, ticket } = addManualTicket(progress, node);
     setProgress(next);
     setModalTicket(ticket);
-    void postTicket(shapeId, ticket);
+    void postTicket(domainSlug, graph!.shape, ticket);
     setView({ mode: "map" });
   }
 
-  // A ticket was authored into new content: re-read the graph and surface the new node.
+  // A ticket authored new content into this domain: re-read the graph, surface the node.
   async function onAuthored(nodeId: string) {
     try {
-      const { graph: g, themes: th } = await loadDomain(shapeId);
+      const { graph: g, themes: th } = await loadDomain(domainSlug);
       setGraph(g);
       setThemes(th);
       setProgress((p) => (p.surfaced.includes(nodeId) ? p : { ...p, surfaced: [...p.surfaced, nodeId] }));
@@ -102,10 +109,19 @@ export default function App() {
     }
   }
 
+  // A whole new topic was authored: refresh the domain index and switch to it.
+  async function afterNewTopic(slug: string) {
+    const d = await loadDomainsIndex();
+    setDomains(d);
+    setNewTopicOpen(false);
+    setThemeId("");
+    setDomainSlug(slug);
+  }
+
   function resetProgress() {
     const fresh = freshProgress();
     setProgress(fresh);
-    saveProgress(shapeId, themeId, fresh);
+    saveProgress(domainSlug, themeId, fresh);
     setView({ mode: "map" });
   }
 
@@ -117,15 +133,18 @@ export default function App() {
           archetype <code>{graph.shape}</code> · now teaching <strong>{theme.subject}</strong>
         </p>
         <div className="domain-switch">
-          {DOMAINS.map((d) => (
+          {domains.map((d) => (
             <button
-              key={d.shape}
-              className={`domain-btn ${d.shape === shapeId ? "on" : ""}`}
-              onClick={() => setShapeId(d.shape)}
+              key={d.slug}
+              className={`domain-btn ${d.slug === domainSlug ? "on" : ""}`}
+              onClick={() => setDomainSlug(d.slug)}
             >
               {d.label}
             </button>
           ))}
+          <button className="domain-btn new" onClick={() => setNewTopicOpen(true)}>
+            ＋ New Topic
+          </button>
         </div>
       </header>
 
@@ -140,11 +159,11 @@ export default function App() {
             onSwitchTheme={switchTheme}
             onReset={resetProgress}
           />
-          <Kanban shape={shapeId} onAuthored={onAuthored} />
+          <Kanban domain={domainSlug} shape={graph.shape} onAuthored={onAuthored} />
         </>
       ) : (
         <GameHost
-          key={`${shapeId}:${themeId}:${view.nodeId}`}
+          key={`${domainSlug}:${themeId}:${view.nodeId}`}
           node={nodeById(view.nodeId)}
           theme={theme}
           gameModule={getModule(nodeById(view.nodeId).shape)}
@@ -155,7 +174,8 @@ export default function App() {
         />
       )}
 
-      {modalTicket && <TicketModal ticket={modalTicket} shape={shapeId} onClose={() => setModalTicket(null)} />}
+      {modalTicket && <TicketModal ticket={modalTicket} shape={graph.shape} onClose={() => setModalTicket(null)} />}
+      {newTopicOpen && <NewTopicModal onClose={() => setNewTopicOpen(false)} onCreated={afterNewTopic} />}
     </div>
   );
 }

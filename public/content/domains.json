@@ -1,0 +1,16 @@
+{
+  "domains": [
+    {
+      "slug": "recursive-descent",
+      "label": "🌀 Recursion"
+    },
+    {
+      "slug": "sequence",
+      "label": "📋 Sequence / Process"
+    },
+    {
+      "slug": "how-a-bill-becomes-a-law",
+      "label": "🏛️ How a Bill Becomes a Law"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import http from "node:http";
 import { readdir, readFile, writeFile, mkdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { authorNode, applyAuthored } from "./author.mjs";
+import { authorNode, applyAuthored, authorTopic, applyTopic } from "./author.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -78,13 +78,15 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && url.pathname === "/api/tickets") {
       const body = await readBody(req);
       if (!body.shape) return send(res, 400, { error: "shape required" });
-      // dedupe: reuse an open ticket for the same gap
+      const domain = body.domain || body.shape;
+      // dedupe: reuse an open ticket for the same gap in the same domain
       const open = (await listTickets()).find(
-        (x) => x.shape === body.shape && x.gap === body.gap && x.spec === (body.spec || "") && x.status !== "done"
+        (x) => x.domain === domain && x.gap === body.gap && x.spec === (body.spec || "") && x.status !== "done"
       );
       if (open) return send(res, 200, open);
       const t = {
         id: `t-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        domain,
         shape: body.shape,
         spec: body.spec || "",
         gap: body.gap || "",
@@ -97,6 +99,20 @@ const server = http.createServer(async (req, res) => {
       return send(res, 201, t);
     }
 
+    if (req.method === "POST" && url.pathname === "/api/topics") {
+      const body = await readBody(req);
+      const concept = String(body.concept || "").trim();
+      if (!concept) return send(res, 400, { error: "concept required" });
+      try {
+        const topic = await authorTopic(concept, ROOT);
+        const slug = await applyTopic(concept, topic, ROOT);
+        console.log(`[topic] authored "${concept}" -> ${slug} (${topic.shape})`);
+        return send(res, 200, { slug, label: topic.label, shape: topic.shape });
+      } catch (e) {
+        return send(res, 422, { error: String(e && e.message ? e.message : e) });
+      }
+    }
+
     const m = url.pathname.match(/^\/api\/tickets\/([^/]+)\/author$/);
     if (req.method === "POST" && m) {
       const t = await getTicket(decodeURIComponent(m[1]));
@@ -106,7 +122,7 @@ const server = http.createServer(async (req, res) => {
       await save(t);
       try {
         const { authored, authoredBy } = await authorNode(t, ROOT);
-        const nodeId = await applyAuthored(t.shape, authored, ROOT);
+        const nodeId = await applyAuthored(t.domain || t.shape, authored, ROOT);
         Object.assign(t, { status: "done", nodeId, authoredBy });
         await save(t);
         console.log(`[heal] authored ${nodeId} for gap "${t.gap}" via ${authoredBy}`);

@@ -3,7 +3,7 @@
 // deterministic template author, so the loop ALWAYS closes with valid content
 // even if the model is unavailable or returns something malformed.
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 
@@ -231,7 +231,7 @@ function templateAuthor(ticket, refs) {
 }
 
 export async function authorNode(ticket, root) {
-  const refs = await loadRefs(root, ticket.shape);
+  const refs = await loadRefs(root, ticket.domain || ticket.shape);
   if (process.env.CQ_NO_CLAUDE !== "1") {
     try {
       const raw = await runClaude(buildPrompt(ticket, refs));
@@ -261,4 +261,164 @@ export async function applyAuthored(shape, authored, root) {
     }
   }
   return authored.node.id;
+}
+
+// ============================================================================
+// Whole-topic authoring: a bare concept -> a complete, validated, playable game.
+// Same claude -> validate -> write pipeline, scaled from one node to a full graph.
+// No silent fallback here: if it can't produce a VALID game, it fails loudly.
+// ============================================================================
+
+const titleCase = (s) => String(s).replace(/\b\w/g, (c) => c.toUpperCase());
+
+const ARCHETYPE_BLURB = {
+  sequence:
+    "ordering / process / dependencies — steps that must happen in a valid order (recipes, pipelines, procedures, histories, life cycles, algorithms).",
+  "recursive-descent":
+    "self-similar nesting — a thing that contains a smaller copy of itself until a base case (recursion, fractals, nested structures, Russian dolls).",
+};
+
+async function loadExample(root, shape) {
+  const dir = contentDir(root, shape);
+  const graph = JSON.parse(await readFile(path.join(dir, "graph.json"), "utf8"));
+  const theme = JSON.parse(await readFile(path.join(dir, "themes", `${graph.themes[0]}.json`), "utf8"));
+  return { shape, blurb: ARCHETYPE_BLURB[shape] ?? shape, graph, theme };
+}
+
+function buildTopicPrompt(concept, seq, lastErr) {
+  const fix = lastErr
+    ? `\nPREVIOUS ATTEMPT FAILED VALIDATION: ${lastErr}\nFix exactly that and return corrected JSON.\n`
+    : "";
+  return [
+    `Author a COMPLETE, concise playable learning game for the concept: "${concept}".`,
+    `Pick the archetype whose SHAPE fits best:`,
+    `- "sequence": ordering / process / dependencies (procedures, recipes, pipelines, histories, life cycles). PREFER THIS for most concepts.`,
+    `- "recursive-descent": self-similar nesting (recursion, fractals, nested structures). Only if the concept literally nests inside itself.`,
+    ``,
+    `Make a SMALL curriculum: 3-4 nodes — one intro level (prereqs []), 1-2 middle levels, ONE boss (highest tier) —`,
+    `each teaching ONE idea, with TRUE prerequisites (later depends on earlier). ONE theme naming everything for this`,
+    `concept. Keep all text short.`,
+    ``,
+    `Return ONLY JSON, no markdown, no prose:`,
+    `{"shape":"<shape>","label":"<emoji + short title>","graph":{"shape":"<shape>","themes":["<themeId>"],"spine":[<level ids>],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
+    `Node = {id,type:("level"|"boss"|"sidequest"),concept,tier:int,prereqs:[ids],shape,level,failureModes:[]}. Prereqs acyclic; theme covers EVERY node id.`,
+    ``,
+    `If you choose "sequence", copy THIS working example's structure EXACTLY — node.level = {steps:[{id,needs:[ids]}]};`,
+    `each theme node entry has extra.steps {"<stepId>":{"label","icon"}} for EVERY step id; theme has vocab.run + visual{accent,actorIcon}:`,
+    JSON.stringify(seq.graph),
+    JSON.stringify(seq.theme),
+    ``,
+    `If you choose "recursive-descent": node.level = {startDepth:int,preplaced:[blocks],palette:[blocks],requiredBlocks:["stop","descend"]}`,
+    `with blocks in "stop"|"descend"|"descendSame" (stop+descend obtainable). Theme has vocab{run,stop,descend,descendSame,unit,depthLabel}`,
+    `+ visual{accent,actorIcon,containerShape,coreIcon}; each node entry {title,hook,winText,failText?}.`,
+    fix,
+  ].join("\n");
+}
+
+function normalizeTopic(concept, parsed) {
+  const shape = parsed.shape;
+  const graph = parsed.graph ?? {};
+  const themes = parsed.themes ?? {};
+  graph.shape = shape;
+  if (!Array.isArray(graph.themes) || !graph.themes.length) graph.themes = Object.keys(themes);
+  for (const n of graph.nodes ?? []) n.shape = shape;
+  return { shape, graph, themes, label: parsed.label || `🎓 ${titleCase(concept)}` };
+}
+
+function validateGraph(shape, graph, themes) {
+  if (shape !== "sequence" && shape !== "recursive-descent") throw new Error(`unknown shape "${shape}"`);
+  if (!Array.isArray(graph.nodes) || graph.nodes.length < 3) throw new Error("need >= 3 nodes");
+  const ids = new Set(graph.nodes.map((n) => n.id));
+  if (ids.size !== graph.nodes.length) throw new Error("duplicate node ids");
+  let hasBoss = false;
+  let hasRoot = false;
+  for (const n of graph.nodes) {
+    if (!n.id || !n.concept || typeof n.tier !== "number") throw new Error(`node ${n.id || "?"} missing id/concept/tier`);
+    if (!["level", "boss", "sidequest"].includes(n.type)) throw new Error(`node ${n.id} bad type`);
+    if (n.type === "boss") hasBoss = true;
+    const prereqs = n.prereqs ?? [];
+    for (const p of prereqs) if (!ids.has(p)) throw new Error(`node ${n.id} prereq "${p}" missing`);
+    if (prereqs.length === 0 && n.type !== "sidequest") hasRoot = true;
+    validateLevel(shape, n.level);
+    for (const fm of n.failureModes ?? []) {
+      if (!fm.signal || !fm.gap || !fm.remediation) throw new Error(`node ${n.id} bad failureMode`);
+      const [kind, target] = String(fm.remediation).split(":");
+      if (kind === "sidequest" && !ids.has(target)) throw new Error(`remediation sidequest "${target}" missing`);
+    }
+  }
+  if (!hasBoss) throw new Error("need a boss node");
+  if (!hasRoot) throw new Error("need a starting level (prereqs [])");
+  topoOrThrow(graph.nodes.map((n) => ({ id: n.id, needs: n.prereqs ?? [] })));
+  if (!Array.isArray(graph.spine) || graph.spine.some((id) => !ids.has(id))) throw new Error("spine references unknown node");
+  if (!Array.isArray(graph.themes) || !graph.themes.length) throw new Error("need >= 1 theme");
+  for (const tid of graph.themes) {
+    const t = themes[tid];
+    if (!t) throw new Error(`missing theme "${tid}"`);
+    if (!t.label || !t.subject || !t.bossHook || !t.visual?.accent || !t.visual?.actorIcon)
+      throw new Error(`theme "${tid}" missing label/subject/bossHook/visual`);
+    if (!t.vocab?.run) throw new Error(`theme "${tid}" needs vocab.run`);
+    if (shape === "recursive-descent" && (!t.vocab.stop || !t.vocab.descend || !t.vocab.descendSame))
+      throw new Error(`theme "${tid}" needs vocab.stop/descend/descendSame`);
+    for (const n of graph.nodes) validateThemeEntry(shape, t.nodes?.[n.id], n.level);
+  }
+}
+
+export async function authorTopic(concept, root, attempts = 2) {
+  let seq;
+  try {
+    seq = await loadExample(root, "sequence");
+  } catch {
+    throw new Error("missing sequence reference content");
+  }
+  let lastErr = "";
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      const parsed = parseJson(await runClaude(buildTopicPrompt(concept, seq, lastErr), 300000));
+      const topic = normalizeTopic(concept, parsed);
+      validateGraph(topic.shape, topic.graph, topic.themes);
+      return topic;
+    } catch (e) {
+      lastErr = String(e && e.message ? e.message : e).slice(0, 300);
+      console.error(`[topic] attempt ${i + 1}/${attempts} failed: ${lastErr}`);
+    }
+  }
+  throw new Error(`could not author a valid game for "${concept}" (${lastErr})`);
+}
+
+const DOMAINS_FILE = (root) => path.join(root, "public", "content", "domains.json");
+
+async function updateDomains(root, entry) {
+  const file = DOMAINS_FILE(root);
+  let doc = { domains: [] };
+  try {
+    doc = JSON.parse(await readFile(file, "utf8"));
+  } catch {
+    /* create fresh */
+  }
+  if (!doc.domains.some((d) => d.slug === entry.slug)) doc.domains.push(entry);
+  await writeFile(file, JSON.stringify(doc, null, 2) + "\n");
+}
+
+export async function applyTopic(concept, topic, root) {
+  const base = slug(concept) || "topic";
+  let existing = [];
+  try {
+    existing = JSON.parse(await readFile(DOMAINS_FILE(root), "utf8")).domains.map((d) => d.slug);
+  } catch {
+    /* none yet */
+  }
+  let s = base;
+  let i = 2;
+  while (existing.includes(s)) s = `${base}-${i++}`;
+
+  const dir = contentDir(root, s);
+  await mkdir(path.join(dir, "themes"), { recursive: true });
+  await writeFile(path.join(dir, "graph.json"), JSON.stringify(topic.graph, null, 2) + "\n");
+  for (const tid of Object.keys(topic.themes)) {
+    const theme = topic.themes[tid];
+    theme.id = tid;
+    await writeFile(path.join(dir, "themes", `${tid}.json`), JSON.stringify(theme, null, 2) + "\n");
+  }
+  await updateDomains(root, { slug: s, label: topic.label });
+  return s;
 }
