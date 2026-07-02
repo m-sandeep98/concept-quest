@@ -5,7 +5,7 @@ import { getModule } from "./archetypes/registry";
 import QuestMap from "./shell/Map";
 import GameHost from "./shell/GameHost";
 import TicketModal from "./shell/TicketModal";
-import HealQueue from "./shell/HealQueue";
+import Kanban from "./shell/Kanban";
 import { postTicket } from "./shell/tickets";
 import {
   addManualTicket,
@@ -140,7 +140,7 @@ export default function App() {
             onSwitchTheme={switchTheme}
             onReset={resetProgress}
           />
-          <HealQueue shape={shapeId} onAuthored={onAuthored} />
+          <Kanban shape={shapeId} onAuthored={onAuthored} />
         </>
       ) : (
         <GameHost

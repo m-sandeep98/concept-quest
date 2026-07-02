@@ -42,3 +42,11 @@ export async function authorTicket(id: string): Promise<{ node: { id: string }; 
   if (!r.ok) throw new Error("authoring failed");
   return r.json();
 }
+
+export async function deleteTicket(id: string): Promise<void> {
+  try {
+    await fetch(`${API}/tickets/${encodeURIComponent(id)}`, { method: "DELETE" });
+  } catch {
+    /* server offline — fine */
+  }
+}

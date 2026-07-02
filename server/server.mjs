@@ -3,7 +3,7 @@
 // This server invokes Claude Code to author content into the graph on demand.
 
 import http from "node:http";
-import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
+import { readdir, readFile, writeFile, mkdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { authorNode, applyAuthored } from "./author.mjs";
@@ -40,7 +40,7 @@ function send(res, code, body) {
   res.writeHead(code, {
     "content-type": "application/json",
     "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-methods": "GET,POST,DELETE,OPTIONS",
     "access-control-allow-headers": "content-type",
   });
   res.end(JSON.stringify(body));
@@ -109,6 +109,16 @@ const server = http.createServer(async (req, res) => {
         await save(t);
         return send(res, 500, { error: String(e) });
       }
+    }
+
+    const del = url.pathname.match(/^\/api\/tickets\/([^/]+)$/);
+    if (req.method === "DELETE" && del) {
+      try {
+        await unlink(path.join(QUEUE, `${decodeURIComponent(del[1])}.json`));
+      } catch {
+        /* already gone */
+      }
+      return send(res, 200, { ok: true });
     }
 
     send(res, 404, { error: "not found" });

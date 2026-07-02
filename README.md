@@ -49,7 +49,7 @@ src/
     progress.ts                # mastery, gap detection, tickets, localStorage
     Map.tsx                    # the ladder + theme switcher
     GameHost.tsx               # validates level data, mounts the archetype
-    HealQueue.tsx / tickets.ts # the LIVE self-heal queue + authoring-server client
+    Kanban.tsx / tickets.ts    # the LIVE self-heal kanban (auto-author) + authoring-server client
     TicketModal.tsx            # explains a ticket the moment a gap is flagged
 server/                        # the OFFLINE half of the loop (no LLM in the play loop)
   server.mjs                   # ticket queue + /api/tickets/:id/author endpoint

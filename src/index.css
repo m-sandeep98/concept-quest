@@ -88,21 +88,39 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--acce
 .ticket-row { display: block; width: 100%; text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; color: var(--text); font-size: 13px; cursor: pointer; }
 .ticket-row:hover { border-color: var(--accent); }
 
-/* ---------- Self-heal queue ---------- */
-.heal { margin-top: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
-.heal.offline { color: var(--muted); font-size: 13px; }
-.heal-title { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
-.heal-rows { display: flex; flex-direction: column; gap: 8px; }
-.heal-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
-.heal-row.done { border-color: var(--ok); }
-.heal-row.failed { border-color: var(--bad); }
-.heal-main { display: flex; flex-direction: column; gap: 2px; }
-.heal-gap { font-size: 12px; color: var(--muted); }
-.heal-btn { background: var(--accent); color: #fff; border: none; padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; }
-.heal-btn:disabled { opacity: 0.6; cursor: default; }
-.heal-status { font-size: 12px; color: var(--muted); }
-.heal-status.ok { color: var(--ok); }
-.heal-status.bad { color: var(--bad); }
+/* ---------- Self-heal kanban ---------- */
+.kanban { margin-top: 26px; }
+.kanban.offline { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; color: var(--muted); font-size: 13px; }
+.kanban-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.kanban-title { font-size: 13px; color: var(--muted); }
+.kanban-tools { display: flex; gap: 8px; align-items: center; }
+.auto-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.auto-toggle.on { color: var(--text); border-color: var(--accent); }
+.ktool { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+.ktool:hover { border-color: var(--accent); color: var(--text); }
+.kanban-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 720px) { .kanban-cols { grid-template-columns: 1fr; } }
+.kcol { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; min-height: 80px; }
+.kcol.authoring { border-color: rgba(124, 92, 255, 0.4); }
+.kcol.done { border-color: rgba(55, 214, 143, 0.3); }
+.kcol-head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.kcount { background: var(--panel-2); border-radius: 999px; padding: 1px 8px; font-size: 11px; }
+.kempty { color: var(--line); text-align: center; padding: 10px; }
+.kcard { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+.kcard.done { border-color: var(--ok); }
+.kcard.failed { border-color: var(--bad); }
+.kcard.authoring { border-color: var(--accent); }
+.kspec { font-size: 12px; }
+.kgap { font-size: 11px; color: var(--muted); margin: 4px 0 8px; }
+.kbtn { width: 100%; background: var(--accent); color: #fff; border: none; padding: 7px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.kbtn:disabled { opacity: 0.5; cursor: default; }
+.kstatus { font-size: 12px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.kstatus.ok { color: var(--ok); }
+.kstatus.spin { color: #b9a6ff; animation: pulse 1.2s ease-in-out infinite; }
+.kx { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; }
+.kx:hover { color: var(--bad); }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
 /* ---------- Game host ---------- */
 .gamehost { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px 24px; }
