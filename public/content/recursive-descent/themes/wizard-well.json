@@ -11,7 +11,12 @@
     "unit": "room",
     "depthLabel": "n"
   },
-  "visual": { "accent": "#7c5cff", "containerShape": "square", "coreIcon": "💎", "actorIcon": "🧙" },
+  "visual": {
+    "accent": "#7c5cff",
+    "containerShape": "square",
+    "coreIcon": "💎",
+    "actorIcon": "🧙"
+  },
   "nodes": {
     "intro-return": {
       "title": "The Returning Gem",
@@ -49,6 +54,14 @@
       "winText": "STOP placed, pit escaped. The base case is the exit door — no recursion is safe without it.",
       "failText": {
         "missing-base-case": "Still no STOP — still falling. The base case has to be checked BEFORE the descend."
+      }
+    },
+    "heal-recursive-case": {
+      "title": "One Step Closer",
+      "hook": "Your STOP is set for n = 0 — the base case is ready. Now the recursive step must actually MOVE toward it. Pick the DESCEND that re-casts on a SMALLER room (n − 1) instead of the same one.",
+      "winText": "n went 2 → 1 → 0, and STOP fired at the bottom. A recursive step that shrinks n toward the base case IS the RECURSIVE CASE — that's the whole trick.",
+      "failText": {
+        "no-progress": "Your step re-cast on the SAME room (n stayed 2), so it never shrank and n = 0 never arrived — the well overflowed. The recursive case has to hand a SMALLER problem to the next call."
       }
     }
   }

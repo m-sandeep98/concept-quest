@@ -5,6 +5,8 @@ import { getModule } from "./archetypes/registry";
 import QuestMap from "./shell/Map";
 import GameHost from "./shell/GameHost";
 import TicketModal from "./shell/TicketModal";
+import HealQueue from "./shell/HealQueue";
+import { postTicket } from "./shell/tickets";
 import {
   addManualTicket,
   applyComplete,
@@ -32,7 +34,6 @@ export default function App() {
   const [modalTicket, setModalTicket] = useState<Ticket | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Load the selected domain's content graph + themes.
   useEffect(() => {
     let cancelled = false;
     setGraph(null);
@@ -53,7 +54,6 @@ export default function App() {
     };
   }, [shapeId]);
 
-  // Persist progress (only once the current theme belongs to the loaded domain).
   useEffect(() => {
     if (graph && themeId && themes.some((t) => t.id === themeId)) {
       saveProgress(shapeId, themeId, progress);
@@ -75,7 +75,10 @@ export default function App() {
   function handleComplete(nodeId: string) {
     const { progress: next, newTicket } = applyComplete(progress, nodeById(nodeId));
     setProgress(next);
-    if (newTicket) setModalTicket(newTicket);
+    if (newTicket) {
+      setModalTicket(newTicket);
+      void postTicket(shapeId, newTicket); // hand the gap to the offline authoring server
+    }
     setView({ mode: "map" });
   }
 
@@ -83,7 +86,20 @@ export default function App() {
     const { progress: next, ticket } = addManualTicket(progress, node);
     setProgress(next);
     setModalTicket(ticket);
+    void postTicket(shapeId, ticket);
     setView({ mode: "map" });
+  }
+
+  // A ticket was authored into new content: re-read the graph and surface the new node.
+  async function onAuthored(nodeId: string) {
+    try {
+      const { graph: g, themes: th } = await loadDomain(shapeId);
+      setGraph(g);
+      setThemes(th);
+      setProgress((p) => (p.surfaced.includes(nodeId) ? p : { ...p, surfaced: [...p.surfaced, nodeId] }));
+    } catch {
+      /* ignore */
+    }
   }
 
   function resetProgress() {
@@ -114,16 +130,18 @@ export default function App() {
       </header>
 
       {view.mode === "map" ? (
-        <QuestMap
-          graph={graph}
-          theme={theme}
-          themes={themes}
-          progress={progress}
-          onOpen={(id) => setView({ mode: "play", nodeId: id })}
-          onSwitchTheme={switchTheme}
-          onReset={resetProgress}
-          onShowTicket={setModalTicket}
-        />
+        <>
+          <QuestMap
+            graph={graph}
+            theme={theme}
+            themes={themes}
+            progress={progress}
+            onOpen={(id) => setView({ mode: "play", nodeId: id })}
+            onSwitchTheme={switchTheme}
+            onReset={resetProgress}
+          />
+          <HealQueue shape={shapeId} onAuthored={onAuthored} />
+        </>
       ) : (
         <GameHost
           key={`${shapeId}:${themeId}:${view.nodeId}`}

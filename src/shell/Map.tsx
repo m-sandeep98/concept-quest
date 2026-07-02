@@ -1,5 +1,5 @@
 import type { Graph, GraphNode, Theme } from "../types";
-import type { Progress, Ticket } from "./progress";
+import type { Progress } from "./progress";
 
 type Status = "mastered" | "active" | "locked" | "hidden";
 
@@ -19,10 +19,9 @@ interface Props {
   onOpen: (nodeId: string) => void;
   onSwitchTheme: (themeId: string) => void;
   onReset: () => void;
-  onShowTicket: (ticket: Ticket) => void;
 }
 
-export default function QuestMap({ graph, theme, themes, progress, onOpen, onSwitchTheme, onReset, onShowTicket }: Props) {
+export default function QuestMap({ graph, theme, themes, progress, onOpen, onSwitchTheme, onReset }: Props) {
   const visible = graph.nodes.filter((n) => statusOf(n, progress) !== "hidden");
   const tiers = [...new Set(visible.map((n) => n.tier))].sort((a, b) => b - a); // boss (highest tier) on top
   const hasGap = (node: GraphNode) => progress.gaps.some((g) => g.gap === node.concept);
@@ -80,16 +79,6 @@ export default function QuestMap({ graph, theme, themes, progress, onOpen, onSwi
         ))}
       </div>
 
-      {progress.tickets.length > 0 && (
-        <div className="tickets">
-          <div className="tickets-title">🎫 Claude Code tickets · self-heal queue</div>
-          {progress.tickets.map((t, i) => (
-            <button key={i} className="ticket-row" onClick={() => onShowTicket(t)}>
-              <code>generate:{t.kind === "manual" ? "learner-reported" : t.spec}</code> — gap: {t.gap} (from {t.source})
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

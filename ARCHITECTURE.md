@@ -42,8 +42,14 @@ two themes over ONE `graph.json`** to prove it: `wizard-well` (code) and `matryo
 - **Gap detection is deterministic (option a).** No runtime LLM. Signals come from **play states**: the
   engine's pure `run()` detects `missing-base-case` (no stop → overflow) and `no-progress` (never shrinks
   → overflow). `failureModes` maps a signal → gap → remediation. This is the correctness-critical field.
-- **Self-heal loop.** A crossed gap threshold routes to an existing `sidequest:<id>` (instant) or emits a
-  `generate:<spec>` **ticket** for Claude Code (async). The "I don't get this" button is the manual hatch.
+- **Self-heal loop (wired for real).** A crossed gap threshold routes to an existing `sidequest:<id>`
+  (instant) or emits a `generate:<spec>` **ticket** to the local authoring server (`server/`). Hitting
+  "Author with Claude Code" invokes `claude -p` headlessly, which authors a new sidequest node
+  (structure + a theme entry per subject); the server **validates** it (solvable level, acyclic deps,
+  every step labelled) and writes it into `content/<shape>/`. The app re-reads the graph and the new
+  node appears, surfaced. If the model output is missing/malformed, a deterministic template author
+  clones a known-valid node so the loop always closes. The "I don't get this" button is the manual hatch.
+  The browser never calls an LLM — authoring is strictly offline.
 
 ## The extensibility primitive: the `GameModule` contract
 
@@ -90,4 +96,6 @@ its prerequisite visibly breaks) was the real test of the contract. The result:
 
 - Rule/step order rules are light (recursion checks the base case first regardless of block order); fine for v1.
 - Two archetypes so far — enough to prove the contract generalizes across *shapes*, not just themes.
-- Ticket generation is simulated (the modal) — wiring it to a real Claude Code kanban run is the next step.
+- The self-heal loop is real but manual per ticket (a button) and dev-only (needs `npm run server`); a
+  kanban board view and auto-authoring would be the next polish. `heal-recursive-case` in the recursion
+  content was authored live by `claude -p` through this loop — kept as a real artifact.

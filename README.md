@@ -18,10 +18,12 @@ theme = its *subject*.**
 
 ```bash
 npm install
-npm run dev      # open the printed http://localhost:5173
+npm run dev      # play-time app  → http://localhost:5173
+npm run server   # 2nd terminal   → authoring server on :8787 (enables the LIVE self-heal loop)
 ```
 
-Build check: `npm run build`.
+The game plays fully without the server; the server is only needed for the self-heal loop
+(authoring new content). Build check: `npm run build`.
 
 ## Play the loop
 
@@ -45,9 +47,13 @@ src/
   shell/                       # fixed engine, archetype-agnostic (unchanged across both archetypes)
     contentLoader.ts           # reads content-as-data at runtime
     progress.ts                # mastery, gap detection, tickets, localStorage
-    Map.tsx                    # the ladder + theme switcher + ticket queue
+    Map.tsx                    # the ladder + theme switcher
     GameHost.tsx               # validates level data, mounts the archetype
-    TicketModal.tsx            # the self-heal ticket demo
+    HealQueue.tsx / tickets.ts # the LIVE self-heal queue + authoring-server client
+    TicketModal.tsx            # explains a ticket the moment a gap is flagged
+server/                        # the OFFLINE half of the loop (no LLM in the play loop)
+  server.mjs                   # ticket queue + /api/tickets/:id/author endpoint
+  author.mjs                   # invokes `claude -p` to author a node; deterministic fallback; validates all output
 public/content/
   recursive-descent/           # graph.json + themes/{wizard-well,matryoshka}.json
   sequence/                    # graph.json + themes/{ship-it,bake-a-cake}.json

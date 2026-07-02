@@ -11,7 +11,12 @@
     "unit": "doll",
     "depthLabel": "size"
   },
-  "visual": { "accent": "#e0793a", "containerShape": "round", "coreIcon": "🥚", "actorIcon": "🪆" },
+  "visual": {
+    "accent": "#e0793a",
+    "containerShape": "round",
+    "coreIcon": "🥚",
+    "actorIcon": "🪆"
+  },
   "nodes": {
     "intro-return": {
       "title": "Closing Them Back Up",
@@ -49,6 +54,14 @@
       "winText": "STOP placed — you recognise the solid core now. The base case is what ends the nesting.",
       "failText": {
         "missing-base-case": "Still no STOP — still opening forever. The core has to be checked BEFORE you open again."
+      }
+    },
+    "heal-recursive-case": {
+      "title": "One Size Down",
+      "hook": "The solid core is your stopping point — that part's done. Each step now has to reveal a SMALLER doll, not set the same one back. Choose the OPEN that goes one size down.",
+      "winText": "Each OPEN gave up a smaller doll — size 2 → 1 → core — until it stopped. Going exactly one size smaller each time is the RECURSIVE CASE.",
+      "failText": {
+        "no-progress": "Your step kept opening the SAME-size doll, so it never got smaller and never reached the core — it just piled up forever. The recursive case must pass a smaller doll inward."
       }
     }
   }
