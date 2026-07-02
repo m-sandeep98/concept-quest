@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://concept-quest/graph.schema.json",
+  "title": "Concept Quest content graph",
+  "description": "The theme-neutral structural graph for one archetype/domain. Authored by Claude Code, read by the engine at runtime. Themes (skins) live in ./themes/*.json and reuse THIS graph's node ids.",
+  "type": "object",
+  "required": ["shape", "themes", "spine", "nodes"],
+  "properties": {
+    "shape": { "type": "string", "description": "The archetype that renders every node here, e.g. 'recursive-descent'." },
+    "themes": { "type": "array", "items": { "type": "string" }, "description": "Theme file ids under ./themes/. Each is a different SUBJECT over the same structure." },
+    "spine": { "type": "array", "items": { "type": "string" }, "description": "The top-down motivational ladder: node ids from first to boss." },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "concept", "tier", "prereqs", "shape", "level", "failureModes"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "enum": ["level", "boss", "sidequest"] },
+          "concept": { "type": "string", "description": "The ONE thing this node teaches. One concept per node is a hard rule." },
+          "role": { "type": "string" },
+          "tier": { "type": "integer", "description": "Position on the spine; higher = nearer the boss (rendered on top)." },
+          "prereqs": { "type": "array", "items": { "type": "string" }, "description": "The bottom-up ladder: node ids mastered first." },
+          "hidden": { "type": "boolean", "description": "Sidequests start hidden; they surface when a gap routes to them." },
+          "remediates": { "type": "string" },
+          "clearsGap": { "type": "string", "description": "Mastering this sidequest clears a gap of this concept name." },
+          "shape": { "type": "string" },
+          "level": { "description": "Archetype-specific level config; validated by that archetype's GameModule.validate()." },
+          "failureModes": {
+            "type": "array",
+            "description": "The diagnostic heart of the node. Maps an accumulated PLAY-state signal (tag) to the gap it implies and where to route.",
+            "items": {
+              "type": "object",
+              "required": ["signal", "gap", "remediation"],
+              "properties": {
+                "signal": {
+                  "type": "object",
+                  "required": ["tag", "minCount"],
+                  "properties": {
+                    "tag": { "type": "string", "description": "Emitted by the archetype from a play state (e.g. 'missing-base-case')." },
+                    "minCount": { "type": "integer" }
+                  }
+                },
+                "gap": { "type": "string" },
+                "remediation": { "type": "string", "description": "'sidequest:<node-id>' (instant, deterministic) or 'generate:<spec>' (async Claude Code ticket)." }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

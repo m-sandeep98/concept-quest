@@ -1,0 +1,55 @@
+{
+  "id": "matryoshka",
+  "label": "The Nesting Dolls",
+  "subject": "Nesting dolls (no code)",
+  "bossHook": "Open a nesting doll: each shell holds a smaller doll inside, until the tiny solid core that opens no further — then close them all back up.",
+  "vocab": {
+    "run": "Open doll",
+    "stop": "STOP  ·  if this doll is solid, keep it & close up",
+    "descend": "OPEN  ·  take out the smaller doll inside",
+    "descendSame": "OPEN  ·  put the SAME doll back  ⚠ not smaller",
+    "unit": "doll",
+    "depthLabel": "size"
+  },
+  "visual": { "accent": "#e0793a", "containerShape": "round", "coreIcon": "🥚", "actorIcon": "🪆" },
+  "nodes": {
+    "intro-return": {
+      "title": "Closing Them Back Up",
+      "hook": "Opening dolls is only half of it — once you reach the solid core, you close every shell back up in reverse. Open it and watch them close.",
+      "winText": "You reached the solid core, then closed every doll back up in reverse order. That closing-up is recursion 'unwinding'."
+    },
+    "base-case": {
+      "title": "The Solid Core",
+      "hook": "This keeps opening dolls forever — even the tiny solid ones. Add a STOP so that when you reach the SOLID core, you stop opening.",
+      "winText": "The STOP recognised the solid core and stopped. That 'smallest, opens-no-further' doll is the BASE CASE.",
+      "failText": {
+        "missing-base-case": "No STOP — you kept trying to open dolls that were already solid, forever. Every nesting needs a smallest core to stop at."
+      }
+    },
+    "recursive-case": {
+      "title": "Smaller Each Time",
+      "hook": "You'll stop at the solid core — but each step must take out a SMALLER doll, not the same one. Add an OPEN that reveals the smaller doll inside.",
+      "winText": "Each OPEN revealed a smaller doll until the core. Going one size smaller each time is the RECURSIVE CASE.",
+      "failText": {
+        "no-progress": "Your OPEN put the SAME doll back, so it never got smaller and never reached the core. Each step must go one size down."
+      }
+    },
+    "boss-descent": {
+      "title": "BOSS · The Grand Doll",
+      "hook": "Nothing placed. Build it all: STOP at the solid core AND OPEN a smaller doll each time. Four dolls deep. Go.",
+      "winText": "Base case + shrinking step, from scratch. Boss down — same shape as the wizard's spell, different subject.",
+      "failText": {
+        "missing-base-case": "No STOP — you opened forever. There is no smaller doll than the core.",
+        "no-progress": "It never went smaller — you opened the same doll again and again."
+      }
+    },
+    "bottomless-pit": {
+      "title": "SIDE-QUEST · Forever Opening",
+      "hook": "You kept opening past the core. Drill ONE thing: place the STOP so you know when a doll is solid and quit.",
+      "winText": "STOP placed — you recognise the solid core now. The base case is what ends the nesting.",
+      "failText": {
+        "missing-base-case": "Still no STOP — still opening forever. The core has to be checked BEFORE you open again."
+      }
+    }
+  }
+}
