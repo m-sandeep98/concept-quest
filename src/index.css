@@ -63,7 +63,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--acce
 }
 
 .ladder { display: flex; flex-direction: column; gap: 14px; }
-.tier { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.tier { display: flex; gap: 14px; justify-content: flex-start; flex-wrap: wrap; }
 
 .node {
   position: relative; text-align: left; width: 260px; min-height: 96px;
