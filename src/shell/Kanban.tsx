@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { authorTicket, deleteTicket, listTickets, postTicket, type ServerTicket } from "./tickets";
+import { deleteTicket, listTickets, postTicket, type ServerTicket } from "./tickets";
 
 // A plausible gap per archetype, for the "seed test gap" demo button.
 const SEED: Record<string, { gap: string; spec: string; source: string }> = {
@@ -10,11 +10,12 @@ const SEED: Record<string, { gap: string; spec: string; source: string }> = {
 export default function Kanban({
   domain,
   shape,
-  onAuthored,
+  onAuthor,
 }: {
   domain: string;
   shape: string;
-  onAuthored: (nodeId: string) => void | Promise<void>;
+  // Streams the authoring run into the terminal + reloads; resolves when done.
+  onAuthor: (id: string) => Promise<unknown>;
 }) {
   const [tickets, setTickets] = useState<ServerTicket[]>([]);
   const [online, setOnline] = useState(true);
@@ -27,17 +28,15 @@ export default function Kanban({
     autoRef.current = auto;
   }, [auto]);
 
-  // Author one ticket. Serialized by busyRef so parallel claude runs can't race
-  // on the content files. Used by both the manual button and auto-author.
+  // Serialized by busyRef so parallel claude runs can't race on the content files.
   async function authorOne(id: string) {
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(id);
     try {
-      const res = await authorTicket(id);
-      if (res?.node?.id) await onAuthored(res.node.id);
+      await onAuthor(id);
     } catch {
-      /* status shows failed */
+      /* error shows in terminal + ticket status */
     } finally {
       busyRef.current = false;
       setBusy(null);
@@ -106,13 +105,19 @@ export default function Kanban({
   return (
     <div className="kanban">
       <div className="kanban-head">
-        <span className="kanban-title">🎫 Self-heal kanban — Claude Code authors content from your gaps</span>
+        <span className="kanban-title">Claude Code authors content from your gaps — watch it in the Claude Terminal tab</span>
         <div className="kanban-tools">
           <label className={`auto-toggle ${auto ? "on" : ""}`}>
             <input type="checkbox" checked={auto} onChange={toggleAuto} /> Auto-author
           </label>
-          {SEED[shape] && <button className="ktool" onClick={seed}>＋ seed test gap</button>}
-          <button className="ktool" onClick={clearDone}>clear done</button>
+          {SEED[shape] && (
+            <button className="ktool" onClick={seed}>
+              ＋ seed test gap
+            </button>
+          )}
+          <button className="ktool" onClick={clearDone}>
+            clear done
+          </button>
         </div>
       </div>
 
@@ -138,8 +143,12 @@ export default function Kanban({
                 {t.status === "authoring" && <div className="kstatus spin">authoring… (claude -p)</div>}
                 {t.status === "done" && (
                   <div className="kstatus ok">
-                    <span>✓ {t.authoredBy} → {t.nodeId}</span>
-                    <button className="kx" title="dismiss" onClick={() => deleteTicket(t.id).then(refresh)}>×</button>
+                    <span>
+                      ✓ {t.authoredBy} → {t.nodeId}
+                    </span>
+                    <button className="kx" title="dismiss" onClick={() => deleteTicket(t.id).then(refresh)}>
+                      ×
+                    </button>
                   </div>
                 )}
               </div>

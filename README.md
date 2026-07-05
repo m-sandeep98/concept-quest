@@ -23,11 +23,22 @@ domain was authored this way, live, from the bare phrase.
 ```bash
 npm install
 npm run dev      # play-time app  → http://localhost:5173
-npm run server   # 2nd terminal   → authoring server on :8787 (enables the LIVE self-heal loop)
+npm run server   # 2nd terminal   → authoring server on :8787 (enables authoring: new topics + self-heal)
 ```
 
-The game plays fully without the server; the server is only needed for the self-heal loop
-(authoring new content). Build check: `npm run build`.
+Topics live in the **left sidebar** (＋ New Topic to author one). The **bottom dock** has a **Kanban**
+board and a live **Claude Terminal** that streams `claude -p` as it authors; the game **auto-reloads**
+when a run finishes. The game plays fully without the server — only authoring needs it. Build check:
+`npm run build`.
+
+## Using Claude Code — the one policy rule
+
+Authoring runs `claude -p` **headlessly on your own machine and your own Claude account** — a fully
+supported use of Claude Code. The hard limit: **if you productize this, you may not serve many
+end-users through a single developer account.** Each user must authenticate with their **own** Claude
+account (OAuth) or API key; OAuth tokens are restricted to Claude Code / claude.ai and can't be
+repurposed. See Anthropic's [Usage Policy](https://www.anthropic.com/legal/aup) and
+[Commercial Terms](https://www.anthropic.com/legal/commercial-terms).
 
 ## Play the loop
 

@@ -72,6 +72,21 @@ Limits: authored topics currently ship with empty `failureModes` (so the self-he
 yet); authoring is a ~1-2 min `claude -p` call and only targets the two existing archetypes, so a concept
 that fits neither shape won't author well (which is what motivates archetypes #3+).
 
+## 6. Live authoring terminal (SSE)
+
+Both authoring paths stream to a live "Claude terminal" in the app. The server runs
+`claude -p --output-format stream-json --verbose --include-partial-messages`, parses the newline-
+delimited events (buffer + split on `\n` so events never straddle chunk boundaries), and relays them
+over **Server-Sent Events**: token deltas as `text`, pipeline narration (classify → validate → write)
+as `log`, and a terminal `done`/`failed`. The browser's `EventSource` renders the stream and
+**auto-reloads the affected domain on `done`** — using the completion event, not a file-watcher, so it
+never reads half-written content. The UI is a left sidebar of topic tabs + a bottom dock (Kanban board +
+terminal), mirroring Vibe-Kanban's board+stream split.
+
+**Policy:** authoring runs on the developer's own local Claude account — a supported headless use of
+Claude Code. Productizing to many users requires each user's own account/API key (a single dev account
+may not proxy many end-users). See README.
+
 ## The extensibility primitive: the `GameModule` contract
 
 The shell knows nothing about any specific game — only this (`src/types.ts`):

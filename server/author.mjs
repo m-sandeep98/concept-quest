@@ -75,6 +75,87 @@ function parseJson(text) {
   return JSON.parse(body.slice(start, end + 1));
 }
 
+// Streaming variant of runClaude: emits token deltas + lifecycle logs while
+// Claude generates, and resolves with the final result text. Drives the live
+// "Claude terminal". Uses --output-format stream-json (newline-delimited JSON).
+export function runClaudeStream(prompt, { onText, onLog } = {}, timeoutMs = 300000) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      "claude",
+      ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages"],
+      { stdio: ["pipe", "pipe", "pipe"] }
+    );
+    let buf = "";
+    let finalText = "";
+    let err = "";
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true;
+        child.kill("SIGKILL");
+        reject(new Error("claude timed out"));
+      }
+    }, timeoutMs);
+
+    function handle(ev) {
+      if (ev.type === "system" && ev.subtype === "init") onLog?.("● Claude Code session started");
+      else if (
+        ev.type === "stream_event" &&
+        ev.event?.type === "content_block_delta" &&
+        ev.event.delta?.type === "text_delta"
+      )
+        onText?.(ev.event.delta.text);
+      else if (ev.type === "system" && ev.subtype === "api_retry") onLog?.("… rate-limited, retrying");
+      else if (ev.type === "result" && ev.subtype === "success" && typeof ev.result === "string") {
+        finalText = ev.result;
+        const cost = ev.total_cost_usd != null ? ` · $${Number(ev.total_cost_usd).toFixed(4)}` : "";
+        onLog?.(`● generation complete${cost}`);
+      }
+    }
+
+    // Buffer bytes and split on newlines so events never straddle chunk boundaries.
+    child.stdout.on("data", (chunk) => {
+      buf += chunk.toString("utf8");
+      let nl;
+      while ((nl = buf.indexOf("\n")) !== -1) {
+        const line = buf.slice(0, nl);
+        buf = buf.slice(nl + 1);
+        if (!line.trim()) continue;
+        try {
+          handle(JSON.parse(line));
+        } catch {
+          /* skip non-JSON / partial */
+        }
+      }
+    });
+    child.stderr.on("data", (d) => (err += d));
+    child.on("error", (e) => {
+      if (!done) {
+        done = true;
+        clearTimeout(timer);
+        reject(e);
+      }
+    });
+    child.on("close", (code) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      if (buf.trim()) {
+        try {
+          handle(JSON.parse(buf));
+        } catch {
+          /* ignore */
+        }
+      }
+      if (code !== 0) reject(new Error(`claude exited ${code}: ${err.slice(0, 200)}`));
+      else if (!finalText) reject(new Error("claude produced no result"));
+      else resolve(finalText);
+    });
+    child.stdin.write(prompt);
+    child.stdin.end();
+  });
+}
+
 function buildPrompt(ticket, refs) {
   const { graph, themes } = refs;
   const example =
@@ -230,17 +311,21 @@ function templateAuthor(ticket, refs) {
   return finalize(ticket, partial, refs);
 }
 
-export async function authorNode(ticket, root) {
+export async function authorNode(ticket, root, { onLog, onText } = {}) {
   const refs = await loadRefs(root, ticket.domain || ticket.shape);
   if (process.env.CQ_NO_CLAUDE !== "1") {
     try {
-      const raw = await runClaude(buildPrompt(ticket, refs));
+      onLog?.(`▸ Asking Claude Code to author a "${ticket.gap}" drill for the ${refs.graph.shape} archetype…`);
+      const raw = await runClaudeStream(buildPrompt(ticket, refs), { onLog, onText }, 120000);
       const authored = finalize(ticket, normalizeParsed(parseJson(raw)), refs);
+      onLog?.("✓ Drill validated.");
       return { authored, authoredBy: "claude" };
     } catch (e) {
+      onLog?.(`✗ Claude path failed (${String(e && e.message ? e.message : e).slice(0, 120)}) — using deterministic template`);
       console.error("[author] claude path failed, falling back to template:", String(e).slice(0, 300));
     }
   }
+  onLog?.("▸ Authoring from the deterministic template…");
   return { authored: templateAuthor(ticket, refs), authoredBy: "template" };
 }
 
@@ -401,7 +486,7 @@ export function attachFailureModes(shape, graph) {
   }
 }
 
-export async function authorTopic(concept, root, attempts = 2) {
+export async function authorTopic(concept, root, { attempts = 2, onLog, onText } = {}) {
   let seq;
   try {
     seq = await loadExample(root, "sequence");
@@ -411,13 +496,17 @@ export async function authorTopic(concept, root, attempts = 2) {
   let lastErr = "";
   for (let i = 0; i < attempts; i += 1) {
     try {
-      const parsed = parseJson(await runClaude(buildTopicPrompt(concept, seq, lastErr), 300000));
-      const topic = normalizeTopic(concept, parsed);
+      onLog?.(`▸ Asking Claude Code to classify "${concept}" and author a full game… (attempt ${i + 1})`);
+      const text = await runClaudeStream(buildTopicPrompt(concept, seq, lastErr), { onLog, onText }, 300000);
+      onLog?.("▸ Parsing and validating the authored graph…");
+      const topic = normalizeTopic(concept, parseJson(text));
       attachFailureModes(topic.shape, topic.graph);
       validateGraph(topic.shape, topic.graph, topic.themes);
+      onLog?.(`✓ Valid: "${topic.shape}" archetype · ${topic.graph.nodes.length} nodes · acyclic · boss present.`);
       return topic;
     } catch (e) {
       lastErr = String(e && e.message ? e.message : e).slice(0, 300);
+      onLog?.(`✗ Attempt ${i + 1} failed validation: ${lastErr}${i + 1 < attempts ? " — retrying" : ""}`);
       console.error(`[topic] attempt ${i + 1}/${attempts} failed: ${lastErr}`);
     }
   }

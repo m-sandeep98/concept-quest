@@ -46,6 +46,22 @@ function send(res, code, body) {
   res.end(JSON.stringify(body));
 }
 
+// Server-Sent Events: stream authoring logs + Claude's live output to the browser.
+function sseInit(res) {
+  res.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache, no-transform",
+    connection: "keep-alive",
+    "access-control-allow-origin": "*",
+    "x-accel-buffering": "no",
+  });
+  res.write(": connected\n\n");
+  return {
+    send: (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+    end: () => res.end(),
+  };
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let d = "";
@@ -111,6 +127,70 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         return send(res, 422, { error: String(e && e.message ? e.message : e) });
       }
+    }
+
+    // Stream a whole-topic authoring run (live Claude terminal).
+    if (req.method === "GET" && url.pathname === "/api/topics/stream") {
+      const sse = sseInit(res);
+      const concept = String(url.searchParams.get("concept") || "").trim();
+      if (!concept) {
+        sse.send("failed", { error: "concept required" });
+        return sse.end();
+      }
+      (async () => {
+        try {
+          const topic = await authorTopic(concept, ROOT, {
+            onLog: (text) => sse.send("log", { text }),
+            onText: (text) => sse.send("text", { text }),
+          });
+          sse.send("log", { text: "▸ Writing content files…" });
+          const slug = await applyTopic(concept, topic, ROOT);
+          sse.send("log", { text: `✓ Wrote content/${slug}/ and updated domains.json` });
+          sse.send("done", { slug, label: topic.label, shape: topic.shape });
+        } catch (e) {
+          sse.send("failed", { error: String(e && e.message ? e.message : e) });
+        } finally {
+          sse.end();
+        }
+      })();
+      return;
+    }
+
+    // Stream a self-heal authoring run for one ticket (live Claude terminal).
+    const sm = url.pathname.match(/^\/api\/tickets\/([^/]+)\/author\/stream$/);
+    if (req.method === "GET" && sm) {
+      const sse = sseInit(res);
+      (async () => {
+        const t = await getTicket(decodeURIComponent(sm[1]));
+        if (!t) {
+          sse.send("failed", { error: "no such ticket" });
+          return sse.end();
+        }
+        if (t.status === "done") {
+          sse.send("done", { nodeId: t.nodeId, authoredBy: t.authoredBy });
+          return sse.end();
+        }
+        t.status = "authoring";
+        await save(t);
+        try {
+          const { authored, authoredBy } = await authorNode(t, ROOT, {
+            onLog: (text) => sse.send("log", { text }),
+            onText: (text) => sse.send("text", { text }),
+          });
+          sse.send("log", { text: `▸ Inserting node into content/${t.domain || t.shape}/…` });
+          const nodeId = await applyAuthored(t.domain || t.shape, authored, ROOT);
+          Object.assign(t, { status: "done", nodeId, authoredBy });
+          await save(t);
+          sse.send("done", { nodeId, authoredBy });
+        } catch (e) {
+          Object.assign(t, { status: "failed", error: String(e) });
+          await save(t);
+          sse.send("failed", { error: String(e && e.message ? e.message : e) });
+        } finally {
+          sse.end();
+        }
+      })();
+      return;
     }
 
     const m = url.pathname.match(/^\/api\/tickets\/([^/]+)\/author$/);

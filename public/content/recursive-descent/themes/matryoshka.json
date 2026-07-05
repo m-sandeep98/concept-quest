@@ -63,14 +63,6 @@
       "failText": {
         "no-progress": "Your step kept opening the SAME-size doll, so it never got smaller and never reached the core — it just piled up forever. The recursive case must pass a smaller doll inward."
       }
-    },
-    "heal-recursive-case-2": {
-      "title": "Two Dolls Down",
-      "hook": "The STOP at the solid core is already placed — the base case is done. Just add the OPEN that takes out the SMALLER doll inside. Only two dolls to the core.",
-      "winText": "Each OPEN gave up a smaller doll — size 2 → 1 → core — then STOP kept it. Going one size smaller each step is the RECURSIVE CASE.",
-      "failText": {
-        "no-progress": "Your OPEN set the SAME-size doll back, so it never shrank and never reached the core — it just piled up forever. The recursive case must pass a SMALLER doll inward."
-      }
     }
   }
 }

@@ -7,6 +7,10 @@ import GameHost from "./shell/GameHost";
 import TicketModal from "./shell/TicketModal";
 import Kanban from "./shell/Kanban";
 import NewTopicModal from "./shell/NewTopicModal";
+import Sidebar from "./shell/Sidebar";
+import AgentDock from "./shell/AgentDock";
+import Terminal from "./shell/Terminal";
+import { useAuthoring } from "./shell/useAuthoring";
 import { postTicket } from "./shell/tickets";
 import {
   addManualTicket,
@@ -30,8 +34,10 @@ export default function App() {
   const [modalTicket, setModalTicket] = useState<Ticket | null>(null);
   const [newTopicOpen, setNewTopicOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dockTab, setDockTab] = useState<"kanban" | "terminal">("kanban");
+  const [dockCollapsed, setDockCollapsed] = useState(false);
+  const authoring = useAuthoring();
 
-  // Which domains exist (new topics append here).
   useEffect(() => {
     loadDomainsIndex().then((d) => {
       setDomains(d);
@@ -39,7 +45,6 @@ export default function App() {
     });
   }, []);
 
-  // Load the selected domain's content graph + themes.
   useEffect(() => {
     if (!domainSlug) return;
     let cancelled = false;
@@ -62,16 +67,12 @@ export default function App() {
   }, [domainSlug]);
 
   useEffect(() => {
-    if (graph && themeId && themes.some((t) => t.id === themeId)) {
-      saveProgress(domainSlug, themeId, progress);
-    }
+    if (graph && themeId && themes.some((t) => t.id === themeId)) saveProgress(domainSlug, themeId, progress);
   }, [domainSlug, themeId, themes, graph, progress]);
 
-  if (error) return <div className="app-msg error">Failed to load content: {error}</div>;
-  if (!graph || !themeId) return <div className="app-msg">Loading…</div>;
-
-  const theme = themes.find((t) => t.id === themeId)!;
-  const nodeById = (id: string) => graph.nodes.find((n) => n.id === id)!;
+  const theme = themes.find((t) => t.id === themeId);
+  const nodeById = (id: string) => graph!.nodes.find((n) => n.id === id)!;
+  const ready = !!(graph && themeId && theme);
 
   function switchTheme(id: string) {
     setThemeId(id);
@@ -97,7 +98,6 @@ export default function App() {
     setView({ mode: "map" });
   }
 
-  // A ticket authored new content into this domain: re-read the graph, surface the node.
   async function onAuthored(nodeId: string) {
     try {
       const { graph: g, themes: th } = await loadDomain(domainSlug);
@@ -109,11 +109,9 @@ export default function App() {
     }
   }
 
-  // A whole new topic was authored: refresh the domain index and switch to it.
   async function afterNewTopic(slug: string) {
     const d = await loadDomainsIndex();
     setDomains(d);
-    setNewTopicOpen(false);
     setThemeId("");
     setDomainSlug(slug);
   }
@@ -125,57 +123,103 @@ export default function App() {
     setView({ mode: "map" });
   }
 
+  // Author a heal ticket through the streaming terminal, then hot-reload.
+  async function authorTicketStreaming(id: string) {
+    setDockTab("terminal");
+    setDockCollapsed(false);
+    const r = (await authoring.startHeal(id)) as { nodeId?: string };
+    if (r?.nodeId) await onAuthored(r.nodeId);
+    return r;
+  }
+
+  // Author a whole new topic through the streaming terminal, then switch to it.
+  async function submitNewTopic(concept: string) {
+    setNewTopicOpen(false);
+    setDockTab("terminal");
+    setDockCollapsed(false);
+    try {
+      const r = (await authoring.startTopic(concept)) as { slug?: string };
+      if (r?.slug) await afterNewTopic(r.slug);
+    } catch {
+      /* error is shown in the terminal */
+    }
+  }
+
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Concept Quest</h1>
-        <p className="app-sub">
-          archetype <code>{graph.shape}</code> · now teaching <strong>{theme.subject}</strong>
-        </p>
-        <div className="domain-switch">
-          {domains.map((d) => (
-            <button
-              key={d.slug}
-              className={`domain-btn ${d.slug === domainSlug ? "on" : ""}`}
-              onClick={() => setDomainSlug(d.slug)}
-            >
-              {d.label}
-            </button>
-          ))}
-          <button className="domain-btn new" onClick={() => setNewTopicOpen(true)}>
-            ＋ New Topic
-          </button>
+      <header className="app-header app-header-row">
+        <div>
+          <h1>Concept Quest</h1>
+          <p className="app-sub">
+            {ready ? (
+              <>
+                archetype <code>{graph!.shape}</code> · teaching <strong>{theme!.subject}</strong>
+              </>
+            ) : (
+              "Gamify any concept into a playable game"
+            )}
+          </p>
         </div>
+        <span
+          className="policy-note"
+          title="Authoring runs `claude -p` on YOUR local Claude account. Shipping this to many users requires each user's own account/API key — see README."
+        >
+          🔒 uses your local Claude account
+        </span>
       </header>
 
-      {view.mode === "map" ? (
-        <>
-          <QuestMap
-            graph={graph}
-            theme={theme}
-            themes={themes}
-            progress={progress}
-            onOpen={(id) => setView({ mode: "play", nodeId: id })}
-            onSwitchTheme={switchTheme}
-            onReset={resetProgress}
-          />
-          <Kanban domain={domainSlug} shape={graph.shape} onAuthored={onAuthored} />
-        </>
+      {error ? (
+        <div className="app-msg error">Failed to load content: {error}</div>
       ) : (
-        <GameHost
-          key={`${domainSlug}:${themeId}:${view.nodeId}`}
-          node={nodeById(view.nodeId)}
-          theme={theme}
-          gameModule={getModule(nodeById(view.nodeId).shape)}
-          onSignal={(tag) => setProgress((p) => applySignal(p, view.nodeId, tag))}
-          onComplete={() => handleComplete(view.nodeId)}
-          onExit={() => setView({ mode: "map" })}
-          onEscapeHatch={() => handleEscapeHatch(nodeById(view.nodeId))}
-        />
+        <div className="layout">
+          <Sidebar domains={domains} current={domainSlug} onSelect={setDomainSlug} onNew={() => setNewTopicOpen(true)} />
+          <main className="main">
+            {!ready ? (
+              <div className="app-msg">Loading…</div>
+            ) : view.mode === "map" ? (
+              <QuestMap
+                graph={graph!}
+                theme={theme!}
+                themes={themes}
+                progress={progress}
+                onOpen={(id) => setView({ mode: "play", nodeId: id })}
+                onSwitchTheme={switchTheme}
+                onReset={resetProgress}
+              />
+            ) : (
+              <GameHost
+                key={`${domainSlug}:${themeId}:${view.nodeId}`}
+                node={nodeById(view.nodeId)}
+                theme={theme!}
+                gameModule={getModule(nodeById(view.nodeId).shape)}
+                onSignal={(tag) => setProgress((p) => applySignal(p, view.nodeId, tag))}
+                onComplete={() => handleComplete(view.nodeId)}
+                onExit={() => setView({ mode: "map" })}
+                onEscapeHatch={() => handleEscapeHatch(nodeById(view.nodeId))}
+              />
+            )}
+          </main>
+        </div>
       )}
 
-      {modalTicket && <TicketModal ticket={modalTicket} shape={graph.shape} onClose={() => setModalTicket(null)} />}
-      {newTopicOpen && <NewTopicModal onClose={() => setNewTopicOpen(false)} onCreated={afterNewTopic} />}
+      <AgentDock
+        tab={dockTab}
+        setTab={setDockTab}
+        collapsed={dockCollapsed}
+        setCollapsed={setDockCollapsed}
+        running={authoring.running}
+        kanban={
+          ready ? (
+            <Kanban domain={domainSlug} shape={graph!.shape} onAuthor={authorTicketStreaming} />
+          ) : (
+            <div className="app-msg">…</div>
+          )
+        }
+        terminal={<Terminal entries={authoring.entries} status={authoring.status} error={authoring.error} />}
+      />
+
+      {modalTicket && ready && <TicketModal ticket={modalTicket} shape={graph!.shape} onClose={() => setModalTicket(null)} />}
+      {newTopicOpen && <NewTopicModal onClose={() => setNewTopicOpen(false)} onSubmit={submitNewTopic} />}
     </div>
   );
 }

@@ -1,63 +1,41 @@
 import { useState } from "react";
-import { authorTopic } from "./tickets";
 
 export default function NewTopicModal({
   onClose,
-  onCreated,
+  onSubmit,
 }: {
   onClose: () => void;
-  onCreated: (slug: string) => void;
+  onSubmit: (concept: string) => void;
 }) {
   const [concept, setConcept] = useState("");
-  const [phase, setPhase] = useState<"idle" | "authoring" | "error">("idle");
-  const [error, setError] = useState("");
-
-  async function go() {
+  function go() {
     const c = concept.trim();
-    if (!c || phase === "authoring") return;
-    setPhase("authoring");
-    setError("");
-    try {
-      const res = await authorTopic(c);
-      onCreated(res.slug);
-    } catch (e) {
-      setPhase("error");
-      setError(String(e instanceof Error ? e.message : e));
-    }
+    if (c) onSubmit(c);
   }
-
   return (
-    <div className="modal-backdrop" onClick={phase === "authoring" ? undefined : onClose}>
+    <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-tag">🎓 New topic · authored by Claude Code</div>
         <h3>Gamify any concept</h3>
         <p className="modal-note">
-          Type a concept. Claude Code picks the archetype whose <em>shape</em> fits, authors a full playable
-          game (intro → levels → boss), and validates it before it appears.
+          Type a concept. Claude Code picks the archetype whose <em>shape</em> fits and authors a full playable game
+          (intro → levels → boss) — watch it work live in the Claude Terminal, and it appears when it's done.
         </p>
         <input
           className="topic-input"
-          placeholder="e.g. how a bill becomes law · photosynthesis · the water cycle"
+          placeholder="e.g. the water cycle · photosynthesis · how coffee is made"
           value={concept}
-          disabled={phase === "authoring"}
           onChange={(e) => setConcept(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && go()}
           autoFocus
         />
-        {phase === "error" && <p className="topic-error">✕ {error}</p>}
         <div className="topic-actions">
-          {phase === "authoring" ? (
-            <span className="topic-authoring">🛠️ Claude Code is authoring a full game… (~1 min · claude -p)</span>
-          ) : (
-            <>
-              <button className="rd-run ghost" onClick={onClose}>
-                Cancel
-              </button>
-              <button className="rd-run" onClick={go} disabled={!concept.trim()}>
-                Author game
-              </button>
-            </>
-          )}
+          <button className="rd-run ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="rd-run" onClick={go} disabled={!concept.trim()}>
+            Author game →
+          </button>
         </div>
       </div>
     </div>
