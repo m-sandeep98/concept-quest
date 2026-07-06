@@ -12,3 +12,6 @@ vite.config.d.ts
 
 # runtime authoring queue
 server/queue/
+
+# Playwright MCP screenshot/output artifacts
+.playwright-mcp/

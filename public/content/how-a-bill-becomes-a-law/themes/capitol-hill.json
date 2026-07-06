@@ -155,6 +155,31 @@
           }
         }
       }
+    },
+    "heal-order-matters": {
+      "title": "SIDE-QUEST · One Step at a Time",
+      "hook": "Three steps, one straight line. A bill has to exist before it moves, and move before it's voted on. Put them in the only order that works.",
+      "winText": "Draft → introduce → vote. Each step needs the one right before it, so there's exactly one order that runs. That's what 'order matters' means.",
+      "failText": {
+        "wrong-start": "You began with a step that needs something first. Lead with the draft — it's the only step that needs nothing.",
+        "dependency-violation": "A step ran before the one it depends on. A bill can't be introduced before it's drafted, or voted on before it's introduced."
+      },
+      "extra": {
+        "steps": {
+          "s1": {
+            "label": "Draft the bill",
+            "icon": "📝"
+          },
+          "s2": {
+            "label": "Introduce it in Congress",
+            "icon": "🏛️"
+          },
+          "s3": {
+            "label": "Floor vote",
+            "icon": "🗳️"
+          }
+        }
+      }
     }
   }
 }

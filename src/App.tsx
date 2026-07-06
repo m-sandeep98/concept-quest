@@ -34,6 +34,7 @@ export default function App() {
   const [modalTicket, setModalTicket] = useState<Ticket | null>(null);
   const [newTopicOpen, setNewTopicOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [dockTab, setDockTab] = useState<"kanban" | "terminal">("kanban");
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const authoring = useAuthoring();
@@ -64,7 +65,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [domainSlug]);
+  }, [domainSlug, reloadKey]);
 
   useEffect(() => {
     if (graph && themeId && themes.some((t) => t.id === themeId)) saveProgress(domainSlug, themeId, progress);
@@ -145,62 +146,95 @@ export default function App() {
     }
   }
 
+  const agent =
+    authoring.status === "running"
+      ? { cls: "run", label: "authoring" }
+      : authoring.status === "error"
+        ? { cls: "err", label: "error" }
+        : authoring.status === "done"
+          ? { cls: "ok", label: "ready" }
+          : { cls: "idle", label: "standby" };
+
   return (
     <div className="app">
-      <header className="app-header app-header-row">
-        <div>
-          <h1>Concept Quest</h1>
-          <p className="app-sub">
-            {ready ? (
-              <>
-                archetype <code>{graph!.shape}</code> · teaching <strong>{theme!.subject}</strong>
-              </>
-            ) : (
-              "Gamify any concept into a playable game"
-            )}
-          </p>
+      <header className="cmd">
+        <div className="cmd-brand">
+          <svg className="cmd-mark" width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path d="M16 3 L27 9.5 V22.5 L16 29 L5 22.5 V9.5 Z" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
+            <g className="spin">
+              <path d="M16 7 L23.5 19.5 L8.5 19.5 Z" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+              <circle cx="16" cy="7" r="1.7" fill="currentColor" />
+              <circle cx="23.5" cy="19.5" r="1.7" fill="currentColor" />
+              <circle cx="8.5" cy="19.5" r="1.7" fill="currentColor" />
+            </g>
+            <circle cx="16" cy="16" r="3.2" fill="currentColor" />
+          </svg>
+          <div className="cmd-id">
+            <h1 className="cmd-word">
+              Concept<b>Quest</b>
+            </h1>
+            <p className="cmd-sub">
+              {ready ? (
+                <>
+                  archetype <code>{graph!.shape}</code> · teaching <strong>{theme!.subject}</strong>
+                </>
+              ) : (
+                "gamify any concept into a playable game"
+              )}
+            </p>
+          </div>
         </div>
-        <span
-          className="policy-note"
-          title="Authoring runs `claude -p` on YOUR local Claude account. Shipping this to many users requires each user's own account/API key — see README."
-        >
-          🔒 uses your local Claude account
-        </span>
+        <div className="cmd-right">
+          <span className={`agent-chip ${agent.cls}`}>
+            <i className="agent-dot" />
+            agent · {agent.label}
+          </span>
+          <span
+            className="policy-note"
+            title="Authoring runs `claude -p` on YOUR local Claude account. Shipping this to many users requires each user's own account/API key — see README."
+          >
+            🔒 local Claude account
+          </span>
+        </div>
       </header>
 
-      {error ? (
-        <div className="app-msg error">Failed to load content: {error}</div>
-      ) : (
-        <div className="layout">
-          <Sidebar domains={domains} current={domainSlug} onSelect={setDomainSlug} onNew={() => setNewTopicOpen(true)} />
-          <main className="main">
-            {!ready ? (
-              <div className="app-msg">Loading…</div>
-            ) : view.mode === "map" ? (
-              <QuestMap
-                graph={graph!}
-                theme={theme!}
-                themes={themes}
-                progress={progress}
-                onOpen={(id) => setView({ mode: "play", nodeId: id })}
-                onSwitchTheme={switchTheme}
-                onReset={resetProgress}
-              />
-            ) : (
-              <GameHost
-                key={`${domainSlug}:${themeId}:${view.nodeId}`}
-                node={nodeById(view.nodeId)}
-                theme={theme!}
-                gameModule={getModule(nodeById(view.nodeId).shape)}
-                onSignal={(tag) => setProgress((p) => applySignal(p, view.nodeId, tag))}
-                onComplete={() => handleComplete(view.nodeId)}
-                onExit={() => setView({ mode: "map" })}
-                onEscapeHatch={() => handleEscapeHatch(nodeById(view.nodeId))}
-              />
-            )}
-          </main>
-        </div>
-      )}
+      <div className="layout">
+        <Sidebar domains={domains} current={domainSlug} onSelect={setDomainSlug} onNew={() => setNewTopicOpen(true)} />
+        <main className="main">
+          {error ? (
+            <div className="app-msg error">
+              <p className="err-title">Couldn't load this topic</p>
+              <p className="err-detail">{error}</p>
+              <button className="rd-run ghost" onClick={() => setReloadKey((k) => k + 1)}>
+                ↻ Retry
+              </button>
+            </div>
+          ) : !ready ? (
+            <div className="app-msg">Loading…</div>
+          ) : view.mode === "map" ? (
+            <QuestMap
+              graph={graph!}
+              theme={theme!}
+              themes={themes}
+              progress={progress}
+              onOpen={(id) => setView({ mode: "play", nodeId: id })}
+              onSwitchTheme={switchTheme}
+              onReset={resetProgress}
+            />
+          ) : (
+            <GameHost
+              key={`${domainSlug}:${themeId}:${view.nodeId}`}
+              node={nodeById(view.nodeId)}
+              theme={theme!}
+              gameModule={getModule(nodeById(view.nodeId).shape)}
+              onSignal={(tag) => setProgress((p) => applySignal(p, view.nodeId, tag))}
+              onComplete={() => handleComplete(view.nodeId)}
+              onExit={() => setView({ mode: "map" })}
+              onEscapeHatch={() => handleEscapeHatch(nodeById(view.nodeId))}
+            />
+          )}
+        </main>
+      </div>
 
       <AgentDock
         tab={dockTab}
