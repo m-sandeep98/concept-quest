@@ -15,3 +15,6 @@ server/queue/
 
 # Playwright MCP screenshot/output artifacts
 .playwright-mcp/
+
+# graphify: derived code graph (regenerate deterministically with `npm run graph`)
+graphify-out/

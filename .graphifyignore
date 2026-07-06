@@ -1,0 +1,7 @@
+# graphify: exclude non-code + generated + heavy files from the code graph
+*.md
+index.html
+package-lock.json
+node_modules/
+dist/
+graphify-out/
