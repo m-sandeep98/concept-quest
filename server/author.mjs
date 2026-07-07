@@ -3,11 +3,37 @@
 // deterministic template author, so the loop ALWAYS closes with valid content
 // even if the model is unavailable or returns something malformed.
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, readdir, rm } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { lintArchetypeFiles, buildProject, engineSelfTest } from "./archetypeGate.mjs";
 
 const contentDir = (root, shape) => path.join(root, "public", "content", shape);
+const archetypesDir = (root) => path.join(root, "src", "archetypes");
+
+// Each archetype self-describes its authoring contract in an `archetype.manifest.json`
+// beside its code. The server reads these instead of hard-coding the shape list, so
+// adding an archetype (a new dir + manifest + reference content) extends authoring for
+// free — no edits here. Shape -> manifest.
+async function loadManifests(root) {
+  const manifests = {};
+  let entries = [];
+  try {
+    entries = await readdir(archetypesDir(root), { withFileTypes: true });
+  } catch {
+    return manifests;
+  }
+  for (const e of entries) {
+    if (!e.isDirectory()) continue;
+    try {
+      const m = JSON.parse(await readFile(path.join(archetypesDir(root), e.name, "archetype.manifest.json"), "utf8"));
+      if (m && m.shape) manifests[m.shape] = m;
+    } catch {
+      /* directory without a manifest — skip */
+    }
+  }
+  return manifests;
+}
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const cap = (s) => String(s).charAt(0).toUpperCase() + String(s).slice(1);
@@ -156,7 +182,7 @@ export function runClaudeStream(prompt, { onText, onLog } = {}, timeoutMs = 3000
   });
 }
 
-function buildPrompt(ticket, refs) {
+function buildPrompt(ticket, refs, manifests) {
   const { graph, themes } = refs;
   const example =
     graph.nodes.find((n) => n.concept === ticket.gap) ||
@@ -177,9 +203,7 @@ function buildPrompt(ticket, refs) {
     `Rules:`,
     `- node.level MUST be structurally valid for shape "${graph.shape}" and SOLVABLE.`,
     `- Every theme entry needs: title, hook, winText, and failText (keys matching the failure tags shown in the examples).`,
-    graph.shape === "binary-search"
-      ? `- For binary-search: node.level = {values:[strictly-ascending ints], targetIndex:int in range, budget?:int}. failText keys are "not-halving" and "ignored-feedback".`
-      : `- For character-descent: node.level has {startDepth:int, preplaced:[blocks], palette:[blocks]} where blocks are "stop"|"descend"|"descendSame"; "stop" and "descend" must be obtainable (preplaced or palette).`,
+    `- ${manifests?.[graph.shape]?.drillLevelFormat ?? `node.level must match the "${graph.shape}" archetype's level format (mirror the EXAMPLE below).`}`,
     `- Anything referenced in themes (step ids / blocks) must exist in node.level.`,
     ``,
     `EXAMPLE node.level:`,
@@ -231,7 +255,10 @@ function validateLevel(shape, level) {
     if (typeof level.targetIndex !== "number" || level.targetIndex < 0 || level.targetIndex >= vals.length)
       throw new Error("level.targetIndex out of range");
   } else {
-    throw new Error(`unknown shape "${shape}"`);
+    // A registered archetype without a builtin structural guard here (e.g. a Stage-2
+    // generated shape). Correctness is enforced by the archetype's own module.validate()
+    // and its engine self-test; the server only insists the level is present.
+    if (!level || typeof level !== "object") throw new Error(`shape "${shape}": level must be an object`);
   }
 }
 
@@ -239,9 +266,9 @@ function validateThemeEntry(shape, e, _level) {
   if (!e || typeof e.title !== "string" || typeof e.hook !== "string" || typeof e.winText !== "string") {
     throw new Error("theme entry needs title, hook, winText");
   }
-  // Both 2D archetypes (character-descent, binary-search) theme purely through the
-  // node's title/hook/winText/failText plus the theme-level vocab/visual — there is
-  // no per-node `extra` payload to validate.
+  // The builtin archetypes theme purely through the node's title/hook/winText/failText
+  // plus the theme-level vocab/visual — there is no per-node `extra` payload to validate.
+  // An archetype that needs `extra` validates it in its own module.validate() boundary.
 }
 
 function finalize(ticket, partial, refs) {
@@ -304,10 +331,11 @@ function templateAuthor(ticket, refs) {
 
 export async function authorNode(ticket, root, { onLog, onText } = {}) {
   const refs = await loadRefs(root, ticket.domain || ticket.shape);
+  const manifests = await loadManifests(root);
   if (process.env.CQ_NO_CLAUDE !== "1") {
     try {
       onLog?.(`▸ Asking Claude Code to author a "${ticket.gap}" drill for the ${refs.graph.shape} archetype…`);
-      const raw = await runClaudeStream(buildPrompt(ticket, refs), { onLog, onText }, 120000);
+      const raw = await runClaudeStream(buildPrompt(ticket, refs, manifests), { onLog, onText }, 120000);
       const authored = finalize(ticket, normalizeParsed(parseJson(raw)), refs);
       onLog?.("✓ Drill validated.");
       return { authored, authoredBy: "claude" };
@@ -347,31 +375,30 @@ export async function applyAuthored(shape, authored, root) {
 
 const titleCase = (s) => String(s).replace(/\b\w/g, (c) => c.toUpperCase());
 
-const ARCHETYPE_BLURB = {
-  "character-descent":
-    "self-similar nesting — a character descends into a thing that contains a smaller copy of itself until a base case (recursion, fractals, nested structures, Russian dolls).",
-  "binary-search":
-    "search by halving — repeatedly split a SORTED range in half to home in on a target (lookup, guessing games, dictionary/library search, divide-and-conquer).",
-};
-
-async function loadExample(root, shape) {
-  const dir = contentDir(root, shape);
+async function loadExample(root, shape, manifests) {
+  const domain = manifests?.[shape]?.exampleDomain ?? shape;
+  const dir = contentDir(root, domain);
   const graph = JSON.parse(await readFile(path.join(dir, "graph.json"), "utf8"));
   const theme = JSON.parse(await readFile(path.join(dir, "themes", `${graph.themes[0]}.json`), "utf8"));
-  return { shape, blurb: ARCHETYPE_BLURB[shape] ?? shape, graph, theme };
+  return { shape, blurb: manifests?.[shape]?.blurb ?? shape, graph, theme };
 }
 
-function buildTopicPrompt(concept, examples, lastErr) {
+function buildTopicPrompt(concept, examples, manifests, lastErr) {
   const fix = lastErr
     ? `\nPREVIOUS ATTEMPT FAILED VALIDATION: ${lastErr}\nFix exactly that and return corrected JSON.\n`
     : "";
-  const cd = examples["character-descent"];
-  const bs = examples["binary-search"];
+  const shapes = Object.keys(manifests);
+  const options = shapes.map((s) => `- "${s}": ${manifests[s].classify}`);
+  const formats = shapes.flatMap((s) => [
+    ``,
+    `If you choose "${s}": ${manifests[s].levelFormat} COPY THIS WORKING EXAMPLE's structure:`,
+    JSON.stringify(examples[s].graph),
+    JSON.stringify(examples[s].theme),
+  ]);
   return [
     `Author a COMPLETE, concise playable learning game for the concept: "${concept}".`,
-    `Both archetypes render on a 2D stage where a character acts out the idea. Pick the SHAPE that fits best:`,
-    `- "character-descent": self-similar nesting / recursion — a character descends into smaller copies until a base case. Choose if the concept literally nests inside itself.`,
-    `- "binary-search": searching a SORTED range by halving (lookup, guessing, dictionary/library search, divide-and-conquer). Choose for find/lookup/guess concepts.`,
+    `Every archetype renders on a 2D stage where a character acts out the idea. Pick the SHAPE that fits best:`,
+    ...options,
     ``,
     `Make a SMALL curriculum: 4-5 nodes — one intro level (prereqs []), 1-2 middle levels, ONE boss (highest tier),`,
     `and ONE sidequest (type "sidequest", prereqs []) that reinforces the main idea — each teaching ONE idea, with`,
@@ -380,18 +407,7 @@ function buildTopicPrompt(concept, examples, lastErr) {
     `Return ONLY JSON, no markdown, no prose:`,
     `{"shape":"<shape>","label":"<emoji + short title>","graph":{"shape":"<shape>","themes":["<themeId>"],"spine":[<level ids>],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
     `Node = {id,type:("level"|"boss"|"sidequest"),concept,tier:int,prereqs:[ids],shape,level,failureModes:[]}. Leave failureModes [] (added automatically). Prereqs acyclic; theme covers EVERY node id.`,
-    ``,
-    `If you choose "character-descent": node.level = {startDepth:int,preplaced:[blocks],palette:[blocks],requiredBlocks:["stop","descend"]}`,
-    `with blocks in "stop"|"descend"|"descendSame" (stop+descend obtainable). Theme has vocab{run,stop,descend,descendSame,unit,depthLabel}`,
-    `+ visual{accent,actorIcon,containerShape,coreIcon}; each node entry {title,hook,winText,failText?}. COPY THIS WORKING EXAMPLE's structure:`,
-    JSON.stringify(cd.graph),
-    JSON.stringify(cd.theme),
-    ``,
-    `If you choose "binary-search": node.level = {values:[strictly-ascending ints],targetIndex:int,budget:int}.`,
-    `Theme has vocab{target,higher,lower,probeWord,hint} + visual{accent,actorIcon,coreIcon}; each node entry {title,hook,winText,failText?}`,
-    `with failText keys "not-halving" and "ignored-feedback". COPY THIS WORKING EXAMPLE's structure:`,
-    JSON.stringify(bs.graph),
-    JSON.stringify(bs.theme),
+    ...formats,
     fix,
   ].join("\n");
 }
@@ -406,8 +422,8 @@ function normalizeTopic(concept, parsed) {
   return { shape, graph, themes, label: parsed.label || `🎓 ${titleCase(concept)}` };
 }
 
-function validateGraph(shape, graph, themes) {
-  if (shape !== "character-descent" && shape !== "binary-search") throw new Error(`unknown shape "${shape}"`);
+function validateGraph(shape, graph, themes, manifests) {
+  if (!manifests?.[shape]) throw new Error(`unknown shape "${shape}" (no registered archetype manifest)`);
   if (!Array.isArray(graph.nodes) || graph.nodes.length < 3) throw new Error("need >= 3 nodes");
   const ids = new Set(graph.nodes.map((n) => n.id));
   if (ids.size !== graph.nodes.length) throw new Error("duplicate node ids");
@@ -437,35 +453,22 @@ function validateGraph(shape, graph, themes) {
     if (!t) throw new Error(`missing theme "${tid}"`);
     if (!t.label || !t.subject || !t.bossHook || !t.visual?.accent || !t.visual?.actorIcon)
       throw new Error(`theme "${tid}" missing label/subject/bossHook/visual`);
-    if (shape === "character-descent") {
-      if (!t.vocab?.run) throw new Error(`theme "${tid}" needs vocab.run`);
-      if (!t.vocab.stop || !t.vocab.descend || !t.vocab.descendSame)
-        throw new Error(`theme "${tid}" needs vocab.stop/descend/descendSame`);
+    // Vocab keys an archetype hard-requires (others have in-component fallbacks).
+    for (const key of manifests[shape].requiredThemeVocab ?? []) {
+      if (!t.vocab?.[key]) throw new Error(`theme "${tid}" needs vocab.${key}`);
     }
-    // binary-search themes read vocab.target/higher/lower/probeWord/hint, all with
-    // in-component fallbacks, so none are hard-required here.
     for (const n of graph.nodes) validateThemeEntry(shape, t.nodes?.[n.id], n.level);
   }
 }
 
-// Each archetype emits a FIXED set of play-state signals. Rather than trust the
-// model to author correct tags, the server attaches the canonical failure modes
-// deterministically — so authored topics get a working self-heal loop for free.
-const FAILURE_MODES = {
-  "character-descent": [
-    { tag: "missing-base-case", minCount: 2, gap: "base case", primary: true },
-    { tag: "no-progress", minCount: 2, gap: "recursive case", remediation: "generate:shrinking-drill" },
-  ],
-  "binary-search": [
-    { tag: "not-halving", minCount: 2, gap: "halve the range", primary: true },
-    { tag: "ignored-feedback", minCount: 2, gap: "use the feedback", remediation: "generate:feedback-drill" },
-  ],
-};
-
-export function attachFailureModes(shape, graph) {
-  const specs = FAILURE_MODES[shape];
-  if (!specs) return;
-  const primaryGap = specs.find((s) => s.primary).gap;
+// Each archetype emits a FIXED set of play-state signals, declared in its manifest
+// (`failureModes`). Rather than trust the model to author correct tags, the server
+// attaches these canonical failure modes deterministically — so authored topics get a
+// working self-heal loop for free.
+export function attachFailureModes(shape, graph, manifests) {
+  const specs = manifests?.[shape]?.failureModes;
+  if (!specs || !specs.length) return;
+  const primaryGap = (specs.find((s) => s.primary) ?? specs[0]).gap;
   const sidequest = graph.nodes.find((n) => n.type === "sidequest");
   if (sidequest) {
     sidequest.clearsGap = primaryGap;
@@ -487,24 +490,43 @@ export function attachFailureModes(shape, graph) {
 }
 
 export async function authorTopic(concept, root, { attempts = 2, onLog, onText } = {}) {
+  const manifests = await loadManifests(root);
+  const shapes = Object.keys(manifests);
+  if (!shapes.length) throw new Error("no archetype manifests found under src/archetypes");
+
+  // Route the concept: reuse an existing archetype, or GENERATE a brand-new one when the
+  // concept's natural interaction fits none of them. Classification failure (e.g. the CLI
+  // is unavailable) falls back to the existing multi-shape author.
+  let routing = { fits: shapes[0] };
+  if (process.env.CQ_NO_CLAUDE !== "1") {
+    try {
+      routing = await classifyConcept(concept, manifests, { onLog });
+    } catch (e) {
+      onLog?.(`(archetype routing skipped: ${String(e && e.message ? e.message : e).slice(0, 100)})`);
+    }
+  }
+  if (!routing.fits) {
+    onLog?.(`▸ No existing archetype fits "${concept}" — generating a NEW archetype${routing.newShape ? ` (${routing.newShape})` : ""}.`);
+    return await generateArchetype(concept, root, { onLog, onText, hint: routing });
+  }
+  onLog?.(`▸ "${concept}" fits the "${routing.fits}" archetype — authoring content for it.`);
+
   let examples;
   try {
-    examples = {
-      "character-descent": await loadExample(root, "character-descent"),
-      "binary-search": await loadExample(root, "binary-search"),
-    };
+    examples = {};
+    for (const s of shapes) examples[s] = await loadExample(root, s, manifests);
   } catch {
-    throw new Error("missing 2D reference content (character-descent / binary-search)");
+    throw new Error(`missing reference content for a registered archetype (${shapes.join(", ")})`);
   }
   let lastErr = "";
   for (let i = 0; i < attempts; i += 1) {
     try {
       onLog?.(`▸ Asking Claude Code to classify "${concept}" and author a full game… (attempt ${i + 1})`);
-      const text = await runClaudeStream(buildTopicPrompt(concept, examples, lastErr), { onLog, onText }, 300000);
+      const text = await runClaudeStream(buildTopicPrompt(concept, examples, manifests, lastErr), { onLog, onText }, 300000);
       onLog?.("▸ Parsing and validating the authored graph…");
       const topic = normalizeTopic(concept, parseJson(text));
-      attachFailureModes(topic.shape, topic.graph);
-      validateGraph(topic.shape, topic.graph, topic.themes);
+      attachFailureModes(topic.shape, topic.graph, manifests);
+      validateGraph(topic.shape, topic.graph, topic.themes, manifests);
       onLog?.(`✓ Valid: "${topic.shape}" archetype · ${topic.graph.nodes.length} nodes · acyclic · boss present.`);
       return topic;
     } catch (e) {
@@ -530,7 +552,10 @@ async function updateDomains(root, entry) {
   await writeFile(file, JSON.stringify(doc, null, 2) + "\n");
 }
 
-export async function applyTopic(concept, topic, root) {
+// Deterministic content-domain slug for a concept (dedup against existing domains).
+// Shared by applyTopic and the archetype generator so a generated manifest's
+// exampleDomain matches where the content actually lands.
+async function nextDomainSlug(root, concept) {
   const base = slug(concept) || "topic";
   let existing = [];
   try {
@@ -541,7 +566,11 @@ export async function applyTopic(concept, topic, root) {
   let s = base;
   let i = 2;
   while (existing.includes(s)) s = `${base}-${i++}`;
+  return s;
+}
 
+export async function applyTopic(concept, topic, root) {
+  const s = await nextDomainSlug(root, concept);
   const dir = contentDir(root, s);
   await mkdir(path.join(dir, "themes"), { recursive: true });
   await writeFile(path.join(dir, "graph.json"), JSON.stringify(topic.graph, null, 2) + "\n");
@@ -552,4 +581,280 @@ export async function applyTopic(concept, topic, root) {
   }
   await updateDomains(root, { slug: s, label: topic.label });
   return s;
+}
+
+// ============================================================================
+// Stage 2 — on-the-go archetype generation. When a concept fits NO registered
+// archetype, Claude Code authors a brand-new one (the island's code + manifest),
+// which only becomes live code after passing the gate (lint · build · self-test).
+// Play-time stays LLM-free: the result is ordinary bundled code.
+// ============================================================================
+
+const EXAMPLE_ARCHETYPE_DIR = "batchPacking";
+
+// Ask Claude whether an existing archetype fits the concept, or a new shape is needed.
+export async function classifyConcept(concept, manifests, { onLog } = {}) {
+  const shapes = Object.keys(manifests);
+  const list = shapes.map((s) => `- "${s}": ${manifests[s].blurb}`).join("\n");
+  const prompt = [
+    `Route a learning concept to a game ARCHETYPE — the interaction SHAPE a player performs on a 2D canvas.`,
+    `CONCEPT: "${concept}"`,
+    ``,
+    `Existing archetypes:`,
+    list,
+    ``,
+    `Does the concept's CORE interaction genuinely match one of these shapes? Reuse a shape ONLY if the mechanic truly fits; otherwise prefer inventing a new shape.`,
+    `Reply with ONLY a JSON object:`,
+    `- fits an existing shape → {"fits":"<shape id>"}`,
+    `- needs a new shape      → {"fits":null,"newShape":"<kebab-case 2-3 words>","idea":"<one sentence: what the player physically does to solve it>"}`,
+  ].join("\n");
+  onLog?.(`▸ Classifying "${concept}" against ${shapes.length} archetype(s)…`);
+  // Plain text mode: the streaming variant stalls on non-trivial completions in some envs.
+  const obj = parseJson(await runClaude(prompt, 120000));
+  const fits = obj.fits && shapes.includes(obj.fits) ? obj.fits : null;
+  return { fits, newShape: obj.newShape ? slug(obj.newShape) : undefined, idea: obj.idea };
+}
+
+// Read every file of the worked-example archetype, relabelled to the fixed generated
+// filenames (Component.tsx / styles.css) so the model copies a consistent structure.
+async function loadArchetypeSource(root) {
+  const base = path.join(root, "src", "archetypes", EXAMPLE_ARCHETYPE_DIR);
+  const rd = (rel) => readFile(path.join(base, rel), "utf8");
+  const types = await readFile(path.join(root, "src", "types.ts"), "utf8");
+  const engine = await rd("engine.ts");
+  const scene = await rd("scene.ts");
+  const component = (await rd("BatchPacking.tsx")).replace(/(["'])\.\/batchPacking\.css\1/g, '"./styles.css"');
+  const moduleTs = (await rd("module.ts")).replace(/(["'])\.\/BatchPacking\1/g, '"./Component"');
+  const css = await rd("batchPacking.css");
+  const manifest = await rd("archetype.manifest.json");
+  const graph = await readFile(path.join(root, "public", "content", "batch-packing", "graph.json"), "utf8");
+  const theme = await readFile(path.join(root, "public", "content", "batch-packing", "themes", "gpu-vllm.json"), "utf8");
+  return { types, engine, scene, component, moduleTs, css, manifest, graph, theme };
+}
+
+// The wiring file is TEMPLATED (not generated): the registry glob discovers this
+// GameModule. The generated engine exports `validate`; Component is its default export.
+function moduleTemplate(shape, label) {
+  return [
+    `import Component from "./Component";`,
+    `import { validate } from "./engine";`,
+    ``,
+    `// Wiring file (templated by the archetype generator). The registry auto-discovers`,
+    `// this GameModule via glob; it meets the shell only at the GameModule contract.`,
+    `export const archetypeModule = {`,
+    `  shape: ${JSON.stringify(shape)},`,
+    `  label: ${JSON.stringify(label)},`,
+    `  component: Component,`,
+    `  validate,`,
+    `};`,
+    "",
+  ].join("\n");
+}
+
+// Generation is decomposed into ONE small model call per file (each a single artifact,
+// which the local CLI produces fast and reliably — a whole-archetype request in one call
+// times out). Each call outputs RAW file text (no JSON-escaping); helpers strip fences.
+const camel = (kebab) => String(kebab).replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+function stripFences(s) {
+  const t = String(s ?? "").trim();
+  const m = t.match(/^```[a-zA-Z0-9]*\s*\n?([\s\S]*?)\n?```$/);
+  return (m ? m[1] : t).trim();
+}
+const fixNote = (e) => (e ? `\nThe previous attempt failed with: "${e}". Avoid that.` : "");
+
+// --- one focused prompt per file (raw output; prior artifacts threaded in for coherence) ---
+function pEngine(concept, ex, shape, hint, lastErr) {
+  return [
+    `Write ONLY the raw TypeScript for engine.ts of a NEW 2D learning-game archetype (shape id "${shape}") for the concept: "${concept}".`,
+    hint?.idea ? `Intended mechanic: ${hint.idea}` : ``,
+    `Make it structurally ANALOGOUS to this example engine, but a genuinely DIFFERENT mechanic (do NOT copy the subject):`,
+    `=== EXAMPLE engine.ts (batch-packing) ===`,
+    ex.engine,
+    `RULES: PURE & deterministic. Import ONLY from "../../types" or nothing; NO React/Pixi/DOM/I-O/fetch/process/eval/Function/Math.random/Date. Export a Level type, a Play type, "export function evaluate(level, play): { outcome: string; signals: string[] }" (outcome "success" = a win; signals = gap tags a wrong play emits), and "export function validate(level): Level" (guard authored data; throw on malformed). ~80-140 lines.`,
+    `Output ONLY the raw engine.ts code — no prose, no JSON, no markdown fences.`,
+    fixNote(lastErr),
+  ].filter(Boolean).join("\n");
+}
+
+function pManifest(concept, ex, shape, engineTs, lastErr) {
+  return [
+    `Write ONLY the raw JSON for archetype.manifest.json of the archetype "${shape}" (concept "${concept}"). Its engine.ts is:`,
+    `=== engine.ts ===`,
+    engineTs,
+    `=== EXAMPLE manifest (batch-packing) ===`,
+    ex.manifest,
+    `RULES: JSON object with fields label, exampleDomain, blurb, classify, levelFormat, drillLevelFormat, requiredThemeVocab (array), failureModes (1-2 of {tag,minCount,gap, and primary:true OR remediation:"generate:<slug>-drill"}), and "selfTest": {"level": <a valid Level for THIS engine>, "cases": [{"play": <a Play>, "expect": "success"}, {"play": <a Play>, "expect": "signal:<tag>"}, ...]}. Include ≥1 success case and one case per failureMode tag; the level MUST be solvable and each tag reachable. The failureMode tags MUST be exactly the signal strings THIS engine emits.`,
+    `Output ONLY the raw manifest JSON — no prose, no fences.`,
+    fixNote(lastErr),
+  ].join("\n");
+}
+
+function pGraph(concept, ex, shape, engineTs, manifest, lastErr) {
+  const tags = (manifest.failureModes || []).map((f) => f.tag).join(", ");
+  return [
+    `Write ONLY the raw JSON for graph.json of the archetype "${shape}" (concept "${concept}"). Its engine.ts is:`,
+    `=== engine.ts ===`,
+    engineTs,
+    `=== EXAMPLE graph.json (batch-packing) ===`,
+    ex.graph,
+    `RULES: {"shape":"${shape}","themes":["<themeId>"],"spine":[<level ids>],"nodes":[...]}. 4-5 nodes: one intro level (prereqs []), 1-2 middle levels, ONE boss (type "boss", highest tier), ONE sidequest (type "sidequest", prereqs []). node = {id,type,concept,tier,prereqs,shape:"${shape}",level,failureModes:[]} (leave failureModes []). EVERY node.level MUST satisfy the engine's validate() AND be solvable. (Signal tags are: ${tags}.)`,
+    `Output ONLY the raw graph JSON — no prose, no fences.`,
+    fixNote(lastErr),
+  ].join("\n");
+}
+
+function pTheme(concept, ex, shape, graph, manifest, lastErr) {
+  const ids = (graph.nodes || []).map((n) => n.id).join(", ");
+  const tags = (manifest.failureModes || []).map((f) => f.tag).join(", ");
+  return [
+    `Write ONLY the raw JSON for ONE theme.json of the archetype "${shape}". The SUBJECT is the concept itself: "${concept}".`,
+    `=== EXAMPLE theme.json (batch-packing) ===`,
+    ex.theme,
+    `RULES: {"id":"<themeId>","label":"<short>","subject":"<subject>","bossHook":"<one line>","vocab":{...archetype vocab...},"visual":{"accent":"#RRGGBB","actorIcon":"<emoji>"},"nodes":{...}}. "nodes" MUST include an entry for EVERY node id: ${ids}. Each entry = {title, hook, winText, failText?} where failText keys are the signal tags: ${tags}. Keep text short.`,
+    `Output ONLY the raw theme JSON — no prose, no fences.`,
+    fixNote(lastErr),
+  ].join("\n");
+}
+
+function pScene(concept, ex, engineTs, lastErr) {
+  return [
+    `Write ONLY the raw TypeScript for scene.ts — a PixiJS RENDERER for this archetype's engine (concept "${concept}"). The engine is:`,
+    `=== engine.ts ===`,
+    engineTs,
+    `=== EXAMPLE scene.ts (batch-packing) ===`,
+    ex.scene,
+    `RULES: RENDERER only — it DRAWS, never grades. Import from "pixi.js" and TYPES from "./engine" only. Export a class with "async init(container: HTMLElement)", a method to (re)draw the current level + play state, and "destroy()"; mirror the example's Application.init / canvas mount / ticker / destroy lifecycle.`,
+    `Output ONLY the raw scene.ts code — no prose, no fences.`,
+    fixNote(lastErr),
+  ].join("\n");
+}
+
+function pComponent(concept, ex, engineTs, sceneTs, lastErr) {
+  return [
+    `Write ONLY the raw TSX for Component.tsx — the React component for this archetype (concept "${concept}").`,
+    `=== CONTRACT (GameProps / Theme / ThemeNode) ===`,
+    ex.types,
+    `=== engine.ts ===`,
+    engineTs,
+    `=== scene.ts ===`,
+    sceneTs,
+    `=== EXAMPLE Component.tsx (batch-packing) ===`,
+    ex.component,
+    `RULES: "export default function" behind GameProps<Level> (import the Level type from "./engine"). Mount the scene ONCE via useEffect (async init guarded by an "alive" flag; destroy on cleanup — see example). Build the player's Play from UI interaction; call evaluate() from "./engine" ONLY to grade on a run; on a loss call onSignal(tag) for EACH returned signal (once); on a win call onComplete({ won: true }). Import "./scene", "./engine", "../../types", and "./styles.css". Read labels from theme.vocab with fallbacks; use themeNode.title/hook/winText/failText and the shared .rd-controls/.rd-run/.rd-outcome classes for run + outcome UI.`,
+    `Output ONLY the raw Component.tsx code — no prose, no fences.`,
+    fixNote(lastErr),
+  ].join("\n");
+}
+
+function pStyles(concept, ex, componentTsx, lastErr) {
+  return [
+    `Write ONLY the raw CSS for styles.css of this archetype's Component (concept "${concept}"). The component is:`,
+    `=== Component.tsx ===`,
+    componentTsx,
+    `=== EXAMPLE styles.css (batch-packing) ===`,
+    ex.css,
+    `RULES: style ONLY the island-local class names this component uses. Reuse shared tokens var(--accent)/var(--line)/var(--panel)/var(--muted); do NOT restyle the shared .rd-* classes. Concise.`,
+    `Output ONLY the raw CSS — no prose, no fences.`,
+    fixNote(lastErr),
+  ].join("\n");
+}
+
+async function writeArchetypeFiles(archDir, files) {
+  await mkdir(archDir, { recursive: true });
+  for (const [name, src] of Object.entries(files)) {
+    await writeFile(path.join(archDir, name), src.endsWith("\n") ? src : src + "\n");
+  }
+}
+
+// Generate a new archetype for `concept` as SEVEN small single-file model calls (engine,
+// manifest, graph, theme, scene, Component, styles) — each fast and reliable, where one
+// whole-archetype call times out. Gated in two stages: the pure engine + content are
+// validated (lint · engine self-test · content) before the renderer is generated (fail
+// fast), then the whole project must typecheck + bundle. On success returns a topic
+// {shape, graph, themes, label} for applyTopic. The generated CODE lives in
+// src/archetypes/<dir>/ and is rolled back if the attempt fails the gate.
+export async function generateArchetype(concept, root, { onLog, attempts = 2, hint } = {}) {
+  const ex = await loadArchetypeSource(root);
+  const shape = hint?.newShape && /^[a-z][a-z0-9-]*$/.test(hint.newShape) ? hint.newShape : slug(concept) || "concept-game";
+  const dir = camel(shape);
+  const archDir = path.join(root, "src", "archetypes", dir);
+  let lastErr = "";
+  for (let i = 0; i < attempts; i += 1) {
+    onLog?.(`▸ Generating archetype "${shape}" for "${concept}" (attempt ${i + 1}/${attempts})…`);
+    try {
+      // 1) engine.ts — the pure correctness core
+      onLog?.("▸ [1/7] engine.ts…");
+      const engineTs = stripFences(await runClaude(pEngine(concept, ex, shape, hint, lastErr), 240000));
+      if (!/export\s+function\s+evaluate\s*\(/.test(engineTs) || !/export\s+function\s+validate\s*\(/.test(engineTs)) {
+        throw new Error("engine.ts must export both evaluate() and validate()");
+      }
+      const wiringProbe = moduleTemplate(shape, shape);
+      lintArchetypeFiles({ "engine.ts": engineTs, "module.ts": wiringProbe });
+
+      // 2) manifest (with selfTest) — matched to this engine
+      onLog?.("▸ [2/7] manifest…");
+      const manifest = parseJson(await runClaude(pManifest(concept, ex, shape, engineTs, lastErr), 180000));
+      if (!manifest?.selfTest?.level || !Array.isArray(manifest.selfTest?.cases) || !manifest.selfTest.cases.length) {
+        throw new Error("manifest.selfTest { level, cases } is required");
+      }
+      const label = manifest.label || shape;
+      manifest.shape = shape;
+      const wiring = moduleTemplate(shape, label);
+      await writeArchetypeFiles(archDir, {
+        "engine.ts": engineTs,
+        "module.ts": wiring,
+        "archetype.manifest.json": JSON.stringify(manifest, null, 2) + "\n",
+      });
+      onLog?.("▸ gate — engine self-test (solvable + emits signals)…");
+      await engineSelfTest(root, path.join(archDir, "engine.ts"), manifest.selfTest);
+
+      // 3) graph + 4) theme — the content, validated against the new manifest
+      onLog?.("▸ [3/7] graph…");
+      const graph = parseJson(await runClaude(pGraph(concept, ex, shape, engineTs, manifest, lastErr), 240000));
+      onLog?.("▸ [4/7] theme…");
+      const theme = parseJson(await runClaude(pTheme(concept, ex, shape, graph, manifest, lastErr), 180000));
+      // Graph and theme were generated in separate calls; force their ids to link (one theme).
+      const themeId = theme.id || (Array.isArray(graph.themes) && graph.themes[0]) || "main";
+      theme.id = themeId;
+      const themes = { [themeId]: theme };
+      graph.shape = shape;
+      graph.themes = [themeId];
+      for (const n of graph.nodes ?? []) n.shape = shape;
+      const withNew = { ...(await loadManifests(root)), [shape]: manifest };
+      attachFailureModes(shape, graph, withNew);
+      validateGraph(shape, graph, themes, withNew);
+      onLog?.("✓ core validated (engine solvable · content valid). Generating the renderer…");
+
+      // 5) scene.ts, 6) Component.tsx, 7) styles.css — the PixiJS renderer
+      onLog?.("▸ [5/7] scene.ts…");
+      const sceneTs = stripFences(await runClaude(pScene(concept, ex, engineTs, lastErr), 300000));
+      onLog?.("▸ [6/7] Component.tsx…");
+      const componentTsx = stripFences(await runClaude(pComponent(concept, ex, engineTs, sceneTs, lastErr), 300000));
+      if (!/export\s+default\s+function/.test(componentTsx)) throw new Error("Component.tsx must export a default function");
+      onLog?.("▸ [7/7] styles.css…");
+      const stylesCss = stripFences(await runClaude(pStyles(concept, ex, componentTsx, lastErr), 150000));
+
+      const allFiles = {
+        "engine.ts": engineTs,
+        "scene.ts": sceneTs,
+        "Component.tsx": componentTsx,
+        "module.ts": wiring,
+        "styles.css": stylesCss,
+      };
+      lintArchetypeFiles(allFiles);
+      await writeArchetypeFiles(archDir, allFiles);
+      onLog?.("▸ gate — build (whole project typechecks + bundles)…");
+      await buildProject(root);
+
+      manifest.exampleDomain = await nextDomainSlug(root, concept);
+      await writeFile(path.join(archDir, "archetype.manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+      onLog?.(`✓ New archetype "${shape}" passed the gate (lint · self-test · build); content valid (${graph.nodes.length} nodes).`);
+      return { shape, graph, themes, label };
+    } catch (e) {
+      lastErr = String(e && e.message ? e.message : e).slice(0, 500);
+      onLog?.(`✗ Attempt ${i + 1} rejected: ${lastErr.split("\n")[0]}`);
+      await rm(archDir, { recursive: true, force: true }); // roll back generated code
+    }
+  }
+  throw new Error(`could not generate a valid archetype for "${concept}": ${lastErr}`);
 }

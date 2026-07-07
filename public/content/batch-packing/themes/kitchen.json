@@ -1,0 +1,58 @@
+{
+  "id": "kitchen",
+  "label": "The Batch Bakery",
+  "subject": "Batch baking (oven throughput)",
+  "bossHook": "A rush of orders, one oven, limited space. Bake them in as few rounds as possible without cramming the oven past its limit — that's throughput.",
+  "vocab": {
+    "resource": "Oven",
+    "item": "tray",
+    "batch": "bake",
+    "capacityLabel": "oven space",
+    "unit": "slots",
+    "runWord": "Start baking",
+    "hint": "Tap a tray to move it between bakes. Fill each bake to the oven's limit — fewer bakes means more cakes per hour."
+  },
+  "visual": {
+    "accent": "#ffb454",
+    "actorIcon": "🧑‍🍳"
+  },
+  "nodes": {
+    "warmup": {
+      "title": "One Oven, Many Trays",
+      "hook": "A slow baker bakes ONE tray at a time. Your oven fits several — slide them into a single bake and they cook together.",
+      "winText": "Baked together, one round did the work of three. That's the whole trick of batching."
+    },
+    "pack-tight": {
+      "title": "Fill the Oven",
+      "hook": "Five trays, oven space for 8 slots a bake. One tray per bake and the oven cools between rounds. Fill each bake to the brim instead.",
+      "winText": "Two full bakes instead of five half-empty ones — the oven never cooled. More cakes per hour.",
+      "failText": {
+        "underutilize": "You spread the trays too thin — the oven idled between tiny bakes. Fill each bake fuller and the round count drops.",
+        "overcommit": "That bake needed more oven space than you have — trays would burn. Move one to another bake."
+      }
+    },
+    "respect-memory": {
+      "title": "The Oven Has a Limit",
+      "hook": "One big tray takes 5 of 6 slots. Cram greedily and things overflow. Fill tight — but never past the oven's limit.",
+      "winText": "Every bake full yet under the limit. Fast AND nothing burnt — that's the balance.",
+      "failText": {
+        "underutilize": "Fewer, fuller bakes would finish sooner — the oven idled. But watch the limit as you fill.",
+        "overcommit": "A bake went over the oven's space. When a tray is big, give it room — split the bake."
+      }
+    },
+    "boss-serve": {
+      "title": "BOSS · Clear the Rush",
+      "hook": "Six trays, oven space for 8, three bakes to clear the rush. Fill them tight and keep every bake under the limit.",
+      "winText": "Six trays cleared in three full bakes, nothing burnt. The rush is handled — that's throughput.",
+      "failText": {
+        "underutilize": "Too many bakes — the oven idled and orders piled up. Fill the bakes fuller.",
+        "overcommit": "A bake went over the oven's space. Rebalance the trays so each bake fits."
+      }
+    },
+    "batch-drill": {
+      "title": "SIDE-QUEST · Fill One Bake",
+      "hook": "Drill the habit: three small trays, one bake, room for all of them. Put them ALL in bake 1.",
+      "winText": "All three in a single bake — the fastest move. Fill first, always."
+    }
+  }
+}

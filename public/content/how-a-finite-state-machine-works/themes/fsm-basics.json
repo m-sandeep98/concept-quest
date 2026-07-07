@@ -1,0 +1,62 @@
+{
+  "id": "fsm-basics",
+  "label": "Finite State Machine",
+  "subject": "How a finite state machine works",
+  "bossHook": "Feed the string through the machine one symbol at a time, hop the token along the labeled arrow for each symbol, and halt on an accepting state — that run is the whole idea of an FSM.",
+  "vocab": {
+    "state": "state",
+    "symbol": "symbol",
+    "machine": "machine",
+    "token": "token",
+    "acceptWord": "Accept",
+    "runWord": "Run the machine",
+    "hint": "Read the input left to right. For each symbol, follow the arrow labeled with it out of the current state. Land on an accepting (double-ring) state and the string is accepted."
+  },
+  "visual": {
+    "accent": "#22c1a4",
+    "actorIcon": "🔵"
+  },
+  "nodes": {
+    "warmup": {
+      "title": "One Symbol, One Hop",
+      "hook": "A machine sits in a state. Read the next symbol, find the arrow labeled with it, and move the token where it points. That single hop is all a state machine ever does.",
+      "winText": "You followed the labeled arrow to the next state. Repeat that for every symbol and you're running the whole machine."
+    },
+    "coin-flow": {
+      "title": "Follow the Labels",
+      "hook": "Each symbol picks exactly one arrow out of the current state. Don't jump — take only the arrow whose label matches the symbol you just read.",
+      "winText": "Every symbol took its matching arrow, and the token landed on an accepting state. That's an accepted string.",
+      "failText": {
+        "wrong-transition": "You moved the token down an arrow that doesn't match the symbol. Read the symbol first, then take only the arrow with that exact label.",
+        "incomplete": "You stopped before reading the whole input. The machine only decides once every symbol is consumed."
+      }
+    },
+    "loop-back": {
+      "title": "Loops and Self-Arrows",
+      "hook": "Some arrows point back to a state you've already been in — even to itself. A repeated symbol just loops the token in place until a different symbol moves it on.",
+      "winText": "You let the token loop on matching symbols, then broke out on the right one and halted accepting. Loops are legal transitions too.",
+      "failText": {
+        "wrong-transition": "You skipped the loop-back arrow. When the symbol matches a self-loop, take it — the token stays put rather than jumping ahead.",
+        "incomplete": "Input left unread. Keep hopping — even through loops — until every symbol is gone."
+      }
+    },
+    "boss-cycle": {
+      "title": "BOSS · Run the Whole String",
+      "hook": "A longer input, states wired with branches and loops. Feed it symbol by symbol, take the one matching arrow each time, and finish on an accepting state.",
+      "winText": "Full string consumed, every hop legal, halted accepting. You just executed a finite state machine end to end — that's exactly what a regex engine or lexer does under the hood.",
+      "failText": {
+        "wrong-transition": "One hop took an arrow the symbol didn't label. A deterministic machine has exactly one right arrow per symbol — follow it, don't guess.",
+        "incomplete": "You halted with symbols still unread. Accept or reject is decided only after the entire input is consumed."
+      }
+    },
+    "reset-drill": {
+      "title": "SIDE-QUEST · One Clean Run",
+      "hook": "Drill the core habit: three symbols, a simple chain of states. Read each symbol, take its labeled arrow, and land on the accepting state.",
+      "winText": "Three symbols, three correct hops, halted accepting. Follow the label, consume it all — that's the whole loop.",
+      "failText": {
+        "wrong-transition": "That arrow's label didn't match the symbol. Match the label before you move.",
+        "incomplete": "You stopped short. Run every symbol before the machine decides."
+      }
+    }
+  }
+}

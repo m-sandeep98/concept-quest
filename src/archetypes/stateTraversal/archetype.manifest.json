@@ -1,0 +1,75 @@
+{
+  "shape": "state-traversal",
+  "label": "State Traversal (2D)",
+  "exampleDomain": "how-a-finite-state-machine-works",
+  "blurb": "reading an input one symbol at a time and hopping a token between states along labeled arrows — the string is accepted only if the machine halts on an accepting state (finite state machines, regex engines, lexers/parsers, protocol & UI lifecycle states, turnstiles, traffic lights, vending logic).",
+  "classify": "feeding an input symbol-by-symbol through a set of states wired together by labeled transition arrows, accepting iff the token halts on an accepting state (finite state machines / automata, regex matching, lexers/parsers, protocol or UI lifecycle states, turnstile/vending logic). Choose for 'state machine', 'automaton', 'transition', 'accept/reject a string' concepts.",
+  "levelFormat": "node.level = {states:[string] (non-empty, unique ids), start:string (∈states), accepting:[string] (non-empty ⊆states), transitions:[{from:string∈states, on:string (non-empty symbol), to:string∈states}] (DETERMINISTIC — at most one arrow per from×on), input:[string] (non-empty symbols fed left→right)}. MUST be solvable: the deterministic run of `input` from `start` follows a defined arrow at every symbol and halts on an accepting state. Theme has vocab{state,symbol,machine,token,acceptWord,runWord,hint} + visual{accent,actorIcon}; each node entry {title,hook,winText,failText?} with failText keys \"wrong-transition\" and \"incomplete\".",
+  "drillLevelFormat": "For state-traversal: node.level = {states,start,accepting,transitions:[{from,on,to}],input} — deterministic (≤1 arrow per state×symbol, all from/to ∈states) and solvable (the run of `input` from `start` has a defined arrow at each step and ends on an accepting state). failText keys are \"wrong-transition\" and \"incomplete\".",
+  "requiredThemeVocab": [],
+  "failureModes": [
+    {
+      "tag": "wrong-transition",
+      "minCount": 2,
+      "gap": "follow the labeled arrow",
+      "primary": true
+    },
+    {
+      "tag": "incomplete",
+      "minCount": 2,
+      "gap": "consume the whole input",
+      "remediation": "generate:transition-drill"
+    }
+  ],
+  "selfTest": {
+    "level": {
+      "states": [
+        "q0",
+        "q1",
+        "q2"
+      ],
+      "start": "q0",
+      "accepting": [
+        "q2"
+      ],
+      "transitions": [
+        {
+          "from": "q0",
+          "on": "a",
+          "to": "q1"
+        },
+        {
+          "from": "q1",
+          "on": "b",
+          "to": "q2"
+        }
+      ],
+      "input": [
+        "a",
+        "b"
+      ]
+    },
+    "cases": [
+      {
+        "play": [
+          "q1",
+          "q2"
+        ],
+        "expect": "success"
+      },
+      {
+        "play": [
+          "q0",
+          "q2"
+        ],
+        "expect": "signal:wrong-transition"
+      },
+      {
+        "play": [
+          "q1"
+        ],
+        "expect": "signal:incomplete"
+      }
+    ]
+  }
+}

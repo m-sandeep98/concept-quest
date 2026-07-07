@@ -1,0 +1,144 @@
+{
+  "shape": "batch-packing",
+  "themes": ["gpu-vllm", "kitchen"],
+  "spine": ["warmup", "pack-tight", "respect-memory", "boss-serve"],
+  "nodes": [
+    {
+      "id": "warmup",
+      "type": "level",
+      "concept": "put many in one batch",
+      "role": "intro",
+      "tier": 1,
+      "prereqs": [],
+      "shape": "batch-packing",
+      "level": {
+        "capacity": 6,
+        "budget": 2,
+        "requests": [
+          { "id": "a", "size": 2 },
+          { "id": "b", "size": 2 },
+          { "id": "c", "size": 2 }
+        ]
+      },
+      "failureModes": []
+    },
+    {
+      "id": "pack-tight",
+      "type": "level",
+      "concept": "batch the work",
+      "role": "batch",
+      "tier": 2,
+      "prereqs": ["warmup"],
+      "shape": "batch-packing",
+      "level": {
+        "capacity": 8,
+        "budget": 2,
+        "requests": [
+          { "id": "a", "size": 3 },
+          { "id": "b", "size": 3 },
+          { "id": "c", "size": 2 },
+          { "id": "d", "size": 2 },
+          { "id": "e", "size": 2 }
+        ]
+      },
+      "failureModes": [
+        {
+          "signal": { "tag": "underutilize", "minCount": 2 },
+          "gap": "batch the work",
+          "remediation": "sidequest:batch-drill"
+        },
+        {
+          "signal": { "tag": "overcommit", "minCount": 2 },
+          "gap": "respect memory",
+          "remediation": "generate:memory-drill"
+        }
+      ]
+    },
+    {
+      "id": "respect-memory",
+      "type": "level",
+      "concept": "respect memory",
+      "role": "memory",
+      "tier": 3,
+      "prereqs": ["pack-tight"],
+      "shape": "batch-packing",
+      "level": {
+        "capacity": 6,
+        "budget": 3,
+        "requests": [
+          { "id": "a", "size": 5 },
+          { "id": "b", "size": 4 },
+          { "id": "c", "size": 3 },
+          { "id": "d", "size": 2 }
+        ]
+      },
+      "failureModes": [
+        {
+          "signal": { "tag": "underutilize", "minCount": 2 },
+          "gap": "batch the work",
+          "remediation": "sidequest:batch-drill"
+        },
+        {
+          "signal": { "tag": "overcommit", "minCount": 2 },
+          "gap": "respect memory",
+          "remediation": "generate:memory-drill"
+        }
+      ]
+    },
+    {
+      "id": "boss-serve",
+      "type": "boss",
+      "concept": "batch without overflowing",
+      "role": "boss",
+      "tier": 4,
+      "prereqs": ["respect-memory"],
+      "shape": "batch-packing",
+      "level": {
+        "capacity": 8,
+        "budget": 3,
+        "requests": [
+          { "id": "a", "size": 5 },
+          { "id": "b", "size": 4 },
+          { "id": "c", "size": 4 },
+          { "id": "d", "size": 3 },
+          { "id": "e", "size": 3 },
+          { "id": "f", "size": 1 }
+        ]
+      },
+      "failureModes": [
+        {
+          "signal": { "tag": "underutilize", "minCount": 2 },
+          "gap": "batch the work",
+          "remediation": "sidequest:batch-drill"
+        },
+        {
+          "signal": { "tag": "overcommit", "minCount": 2 },
+          "gap": "respect memory",
+          "remediation": "generate:memory-drill"
+        }
+      ]
+    },
+    {
+      "id": "batch-drill",
+      "type": "sidequest",
+      "concept": "batch the work",
+      "role": "batch",
+      "tier": 2,
+      "prereqs": [],
+      "hidden": true,
+      "remediates": "pack-tight",
+      "clearsGap": "batch the work",
+      "shape": "batch-packing",
+      "level": {
+        "capacity": 6,
+        "budget": 1,
+        "requests": [
+          { "id": "a", "size": 2 },
+          { "id": "b", "size": 2 },
+          { "id": "c", "size": 2 }
+        ]
+      },
+      "failureModes": []
+    }
+  ]
+}
