@@ -1,0 +1,107 @@
+/* batch-packing archetype — HUD + Pixi stage + request tray. Reuses the shared .rd-*
+   control/outcome classes from index.css (the design system) for the win/fail panels.
+   Island-local class names (no cross-archetype CSS coupling). */
+
+.bp {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bp-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono, monospace);
+  font-size: 14px;
+}
+.bp-res {
+  color: var(--muted, #7f93b8);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.bp-res b {
+  color: var(--accent);
+  font-size: 18px;
+  margin-left: 4px;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.bp-count {
+  color: var(--faint, #566);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+.bp-count.over {
+  color: #ff8a5c;
+  border-color: rgba(255, 138, 92, 0.5);
+}
+
+/* Viewport frame — mirrors the other 2D archetypes so the games read as one family. */
+.bp-stage-wrap {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--r, 14px);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%), var(--panel, #0a0f1e);
+  padding: 10px;
+  overflow: hidden;
+}
+.bp-stage {
+  position: relative;
+  z-index: 1;
+  min-height: 130px;
+}
+.bp-boot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--muted, #7f93b8);
+}
+
+/* Request tray — one chip per request; clicking cycles it to the next batch. */
+.bp-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel, #0a0f1e);
+  color: var(--text, #dbe6ff);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.15s ease;
+}
+.bp-chip:hover {
+  transform: translateY(-1px);
+}
+.bp-chip:disabled {
+  cursor: default;
+  opacity: 0.85;
+  transform: none;
+}
+.bp-chip-size {
+  color: var(--muted, #7f93b8);
+}
+.bp-chip-batch {
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 1px 8px;
+  color: #041018;
+}
+.bp-hint {
+  color: var(--muted, #7f93b8);
+  font-size: 13px;
+}

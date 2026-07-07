@@ -1,0 +1,101 @@
+/* state-traversal archetype — HUD + Pixi stage + state tray. Reuses the shared
+   .rd-* control/outcome classes from index.css for the run/win/fail panels.
+   Island-local class names (no cross-archetype CSS coupling). */
+
+.st {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.st-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted, #7f93b8);
+}
+.st-cur b,
+.st-read b {
+  color: var(--accent);
+  font-size: 18px;
+  margin-left: 4px;
+  text-transform: none;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.st-read {
+  color: var(--faint, #566);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+/* Viewport frame — mirrors the other 2D archetypes so the games read as one family. */
+.st-stage-wrap {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--r, 14px);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%), var(--panel, #0a0f1e);
+  padding: 10px;
+  overflow: hidden;
+}
+.st-stage {
+  position: relative;
+  z-index: 1;
+  min-height: 160px;
+}
+.st-boot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--muted, #7f93b8);
+}
+
+/* State tray — one button per state; the current state is highlighted. */
+.st-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.st-node-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel, #0a0f1e);
+  color: var(--text, #dbe6ff);
+  font-family: var(--font-mono, monospace);
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.st-node-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+}
+.st-node-btn.cur {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.st-node-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+  transform: none;
+}
+
+.st-hint {
+  color: var(--muted, #7f93b8);
+  font-size: 13px;
+}

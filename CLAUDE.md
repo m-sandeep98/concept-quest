@@ -31,9 +31,11 @@ src/
   shell/                      game-agnostic UI + logic (Map, GameHost, AuthorQueue, Terminal,
                               contentLoader, progress, tickets, authoring). Knows NO specific game.
   archetypes/
-    registry.ts               shape -> GameModule. The single wiring point.
+    registry.ts               shape -> GameModule. The single wiring point; auto-globs */module.ts.
     characterDescent/         Component.tsx + scene.ts (PixiJS renderer) + engine.ts (pure) + module.ts
-    binarySearch/             Component.tsx + scene.ts (PixiJS renderer) + engine.ts (pure) + module.ts
+                              + archetype.manifest.json (self-describes the offline authoring contract)
+    binarySearch/             same layout: Component.tsx + scene.ts + engine.ts + module.ts + manifest
+    batchPacking/             same layout — resource/throughput batching (the "why vLLM" shape)
 public/content/<domain>/      authored data: graph.json + themes/*.json  (NOT code — file drops)
 server/                       offline `claude -p` authoring (author.mjs) + SSE server (server.mjs)
 schema/graph.schema.json      JSON Schema for authored graphs
@@ -65,8 +67,13 @@ Before finishing a change, sanity-check rules 1–3 with the graph (below) or:
    `GameModule { shape, label, component, validate }`. `validate` **guards CC-authored data at the
    boundary** — throw on malformed input. Keep `engine.ts` free of React/Pixi — the scene only *draws*
    the engine's output, so the correctness-critical logic stays pure and testable.
-2. Register **one line** in `src/archetypes/registry.ts`.
+2. **No registry edit** — `registry.ts` auto-discovers `src/archetypes/*/module.ts` via `import.meta.glob`.
+   Instead, drop an `archetype.manifest.json` beside `module.ts` so the offline author can classify concepts
+   onto your shape and author valid `level`/theme data (declares `blurb`, `classify`, `levelFormat`,
+   `drillLevelFormat`, `failureModes`, `requiredThemeVocab`, `exampleDomain`). The server reads manifests —
+   it no longer hard-codes the shape list.
 3. Author `public/content/<domain>/graph.json` + `themes/*.json` (each node's `shape` = your new shape).
+   This doubles as the manifest's `exampleDomain` — the reference the author copies structure from.
 
 The map, progress, gap engine, tickets, and theming stay untouched. Archetype-specific per-node theme
 data rides in `ThemeNode.extra` (the shell ignores it; your archetype interprets it).

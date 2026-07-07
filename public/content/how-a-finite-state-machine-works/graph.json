@@ -1,0 +1,305 @@
+{
+  "shape": "state-traversal",
+  "themes": [
+    "fsm-basics"
+  ],
+  "spine": [
+    "warmup",
+    "coin-flow",
+    "loop-back",
+    "boss-cycle"
+  ],
+  "nodes": [
+    {
+      "id": "warmup",
+      "type": "level",
+      "concept": "one symbol fires one arrow",
+      "tier": 1,
+      "prereqs": [],
+      "shape": "state-traversal",
+      "level": {
+        "states": [
+          "locked",
+          "unlocked"
+        ],
+        "start": "locked",
+        "accepting": [
+          "unlocked"
+        ],
+        "transitions": [
+          {
+            "from": "locked",
+            "on": "coin",
+            "to": "unlocked"
+          },
+          {
+            "from": "locked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "coin",
+            "to": "unlocked"
+          }
+        ],
+        "input": [
+          "coin"
+        ]
+      },
+      "failureModes": []
+    },
+    {
+      "id": "coin-flow",
+      "type": "level",
+      "concept": "walk the labeled arrows in order",
+      "tier": 2,
+      "prereqs": [
+        "warmup"
+      ],
+      "shape": "state-traversal",
+      "level": {
+        "states": [
+          "locked",
+          "unlocked"
+        ],
+        "start": "locked",
+        "accepting": [
+          "unlocked"
+        ],
+        "transitions": [
+          {
+            "from": "locked",
+            "on": "coin",
+            "to": "unlocked"
+          },
+          {
+            "from": "locked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "coin",
+            "to": "unlocked"
+          }
+        ],
+        "input": [
+          "coin",
+          "push",
+          "coin"
+        ]
+      },
+      "failureModes": [
+        {
+          "signal": {
+            "tag": "wrong-transition",
+            "minCount": 2
+          },
+          "gap": "follow the labeled arrow",
+          "remediation": "sidequest:reset-drill"
+        },
+        {
+          "signal": {
+            "tag": "incomplete",
+            "minCount": 2
+          },
+          "gap": "consume the whole input",
+          "remediation": "generate:transition-drill"
+        }
+      ]
+    },
+    {
+      "id": "loop-back",
+      "type": "level",
+      "concept": "self-loops keep the token in place",
+      "tier": 3,
+      "prereqs": [
+        "coin-flow"
+      ],
+      "shape": "state-traversal",
+      "level": {
+        "states": [
+          "locked",
+          "unlocked"
+        ],
+        "start": "locked",
+        "accepting": [
+          "unlocked"
+        ],
+        "transitions": [
+          {
+            "from": "locked",
+            "on": "coin",
+            "to": "unlocked"
+          },
+          {
+            "from": "locked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "coin",
+            "to": "unlocked"
+          }
+        ],
+        "input": [
+          "push",
+          "coin",
+          "push",
+          "coin"
+        ]
+      },
+      "failureModes": [
+        {
+          "signal": {
+            "tag": "wrong-transition",
+            "minCount": 2
+          },
+          "gap": "follow the labeled arrow",
+          "remediation": "sidequest:reset-drill"
+        },
+        {
+          "signal": {
+            "tag": "incomplete",
+            "minCount": 2
+          },
+          "gap": "consume the whole input",
+          "remediation": "generate:transition-drill"
+        }
+      ]
+    },
+    {
+      "id": "boss-cycle",
+      "type": "boss",
+      "concept": "halt on an accepting state after the whole string",
+      "tier": 4,
+      "prereqs": [
+        "loop-back"
+      ],
+      "shape": "state-traversal",
+      "level": {
+        "states": [
+          "locked",
+          "unlocked"
+        ],
+        "start": "locked",
+        "accepting": [
+          "unlocked"
+        ],
+        "transitions": [
+          {
+            "from": "locked",
+            "on": "coin",
+            "to": "unlocked"
+          },
+          {
+            "from": "locked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "coin",
+            "to": "unlocked"
+          }
+        ],
+        "input": [
+          "coin",
+          "coin",
+          "push",
+          "coin",
+          "push",
+          "coin"
+        ]
+      },
+      "failureModes": [
+        {
+          "signal": {
+            "tag": "wrong-transition",
+            "minCount": 2
+          },
+          "gap": "follow the labeled arrow",
+          "remediation": "sidequest:reset-drill"
+        },
+        {
+          "signal": {
+            "tag": "incomplete",
+            "minCount": 2
+          },
+          "gap": "consume the whole input",
+          "remediation": "generate:transition-drill"
+        }
+      ]
+    },
+    {
+      "id": "reset-drill",
+      "type": "sidequest",
+      "concept": "walk the labeled arrows in order",
+      "tier": 2,
+      "prereqs": [],
+      "hidden": true,
+      "remediates": "coin-flow",
+      "clearsGap": "follow the labeled arrow",
+      "shape": "state-traversal",
+      "level": {
+        "states": [
+          "locked",
+          "unlocked"
+        ],
+        "start": "locked",
+        "accepting": [
+          "unlocked"
+        ],
+        "transitions": [
+          {
+            "from": "locked",
+            "on": "coin",
+            "to": "unlocked"
+          },
+          {
+            "from": "locked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "push",
+            "to": "locked"
+          },
+          {
+            "from": "unlocked",
+            "on": "coin",
+            "to": "unlocked"
+          }
+        ],
+        "input": [
+          "push",
+          "coin"
+        ]
+      },
+      "failureModes": []
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "id": "gpu-vllm",
+  "label": "vLLM on a GPU",
+  "subject": "Why vLLM batches (GPU inference throughput)",
+  "bossHook": "Six requests, one GPU, limited VRAM. Serve them in as few batches as possible without an out-of-memory — that packing is why vLLM is fast.",
+  "vocab": {
+    "resource": "GPU",
+    "item": "request",
+    "batch": "batch",
+    "capacityLabel": "VRAM",
+    "unit": "KV-blocks",
+    "runWord": "Run batches",
+    "hint": "Tap a request to move it between batches. Pack each batch as full as VRAM allows — fewer batches = higher throughput."
+  },
+  "visual": {
+    "accent": "#7c5cff",
+    "actorIcon": "🖥️"
+  },
+  "nodes": {
+    "warmup": {
+      "title": "One GPU, Many Requests",
+      "hook": "A naive server runs ONE request at a time. Your GPU can hold several at once — drop them into a single batch and it serves them together in one pass.",
+      "winText": "Batched together, the GPU did in one pass what a naive server needs three for. That single idea is most of vLLM's speed."
+    },
+    "pack-tight": {
+      "title": "Keep the GPU Full",
+      "hook": "Five requests, VRAM for 8 blocks a batch. Run them one-per-batch and the GPU idles between each. Pack each batch to the brim instead.",
+      "winText": "Two full batches instead of five thin ones — the GPU stayed busy the whole time. That's continuous batching.",
+      "failText": {
+        "underutilize": "You spread the requests too thin — the GPU sat idle between tiny batches. Pack each batch fuller and the batch count drops.",
+        "overcommit": "That batch asked for more VRAM than the GPU has — an out-of-memory. Move a request to another batch."
+      }
+    },
+    "respect-memory": {
+      "title": "VRAM Is the Ceiling",
+      "hook": "One big request needs 5 of 6 blocks. Batch greedily and you'll overflow VRAM. Pack tight — but never past the ceiling.",
+      "winText": "Every batch full yet under the VRAM line. Throughput AND no OOM — keeping memory packed but safe is exactly PagedAttention's job.",
+      "failText": {
+        "underutilize": "Fewer, fuller batches would serve these faster — the GPU idled. But mind the ceiling as you pack.",
+        "overcommit": "A batch blew past VRAM. When a request is large, give it room — split the batch so nothing overflows."
+      }
+    },
+    "boss-serve": {
+      "title": "BOSS · Serve the Queue",
+      "hook": "Six requests, VRAM for 8, and three batches to stay ahead of the queue. Pack them tight and keep every batch under the ceiling.",
+      "winText": "Six requests served in three packed batches, no OOM. That's a vLLM scheduler doing its job — high throughput, memory-safe.",
+      "failText": {
+        "underutilize": "Too many batches — the GPU idled and the queue backed up. Pack the batches fuller.",
+        "overcommit": "A batch overflowed VRAM. Rebalance the requests so each batch fits under the ceiling."
+      }
+    },
+    "batch-drill": {
+      "title": "SIDE-QUEST · Fill One Batch",
+      "hook": "Drill the core habit: three small requests, one batch, VRAM enough for all of them. Put them ALL in batch 1.",
+      "winText": "All three in a single batch — the maximum-throughput move. Batch first, always."
+    }
+  }
+}

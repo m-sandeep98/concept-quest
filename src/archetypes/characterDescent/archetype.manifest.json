@@ -1,0 +1,14 @@
+{
+  "shape": "character-descent",
+  "label": "Character Descent (2D)",
+  "exampleDomain": "character-descent",
+  "blurb": "self-similar nesting — a character descends into a thing that contains a smaller copy of itself until a base case (recursion, fractals, nested structures, Russian dolls).",
+  "classify": "self-similar nesting / recursion — a character descends into smaller copies until a base case. Choose if the concept literally nests inside itself.",
+  "levelFormat": "node.level = {startDepth:int,preplaced:[blocks],palette:[blocks],requiredBlocks:[\"stop\",\"descend\"]} with blocks in \"stop\"|\"descend\"|\"descendSame\" (stop+descend obtainable). Theme has vocab{run,stop,descend,descendSame,unit,depthLabel} + visual{accent,actorIcon,containerShape,coreIcon}; each node entry {title,hook,winText,failText?}.",
+  "drillLevelFormat": "For character-descent: node.level has {startDepth:int, preplaced:[blocks], palette:[blocks]} where blocks are \"stop\"|\"descend\"|\"descendSame\"; \"stop\" and \"descend\" must be obtainable (preplaced or palette).",
+  "requiredThemeVocab": ["run", "stop", "descend", "descendSame"],
+  "failureModes": [
+    { "tag": "missing-base-case", "minCount": 2, "gap": "base case", "primary": true },
+    { "tag": "no-progress", "minCount": 2, "gap": "recursive case", "remediation": "generate:shrinking-drill" }
+  ]
+}

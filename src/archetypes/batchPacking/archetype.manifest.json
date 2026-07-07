@@ -1,0 +1,22 @@
+{
+  "shape": "batch-packing",
+  "label": "Batch Packing (2D)",
+  "exampleDomain": "batch-packing",
+  "blurb": "packing work into a fixed-capacity resource in as few batches as possible — keep the resource full for throughput without overflowing its memory (batching, scheduling, parallelism, GPU/vLLM serving, bin-packing).",
+  "classify": "packing many items into a fixed-capacity resource across batches to maximize throughput without overflowing memory (batching, scheduling, pipelining, parallelism, GPU serving / vLLM, bin-packing). Choose for throughput / utilization / 'why batch' concepts.",
+  "levelFormat": "node.level = {capacity:int, budget:int (max batches for a clean win), requests:[{id:string,size:int ≤ capacity}]}, with sum(sizes) ≤ capacity×budget so it is solvable. Theme has vocab{resource,item,batch,capacityLabel,unit,runWord,hint} + visual{accent,actorIcon}; each node entry {title,hook,winText,failText?} with failText keys \"underutilize\" and \"overcommit\".",
+  "drillLevelFormat": "For batch-packing: node.level = {capacity:int, budget:int, requests:[{id,size ≤ capacity}]} with sum(sizes) ≤ capacity×budget. failText keys are \"underutilize\" and \"overcommit\".",
+  "requiredThemeVocab": [],
+  "failureModes": [
+    { "tag": "underutilize", "minCount": 2, "gap": "batch the work", "primary": true },
+    { "tag": "overcommit", "minCount": 2, "gap": "respect memory", "remediation": "generate:memory-drill" }
+  ],
+  "selfTest": {
+    "level": { "capacity": 4, "budget": 2, "requests": [{ "id": "a", "size": 2 }, { "id": "b", "size": 2 }, { "id": "c", "size": 2 }] },
+    "cases": [
+      { "play": { "a": 0, "b": 0, "c": 1 }, "expect": "success" },
+      { "play": { "a": 0, "b": 1, "c": 2 }, "expect": "signal:underutilize" },
+      { "play": { "a": 0, "b": 0, "c": 0 }, "expect": "signal:overcommit" }
+    ]
+  }
+}

@@ -73,5 +73,6 @@ export async function loadDomainsIndex(): Promise<DomainEntry[]> {
   return [
     { slug: "character-descent", label: "🌀 Recursion" },
     { slug: "binary-search", label: "🔍 Binary Search" },
+    { slug: "batch-packing", label: "🧩 Batch Packing" },
   ];
 }

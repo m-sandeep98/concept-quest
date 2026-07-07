@@ -7,6 +7,14 @@
     {
       "slug": "binary-search",
       "label": "🔍 Binary Search"
+    },
+    {
+      "slug": "batch-packing",
+      "label": "🧩 Batch Packing"
+    },
+    {
+      "slug": "how-a-finite-state-machine-works",
+      "label": "State Traversal (2D)"
     }
   ]
 }
