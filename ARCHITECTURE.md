@@ -23,16 +23,18 @@ The scalability bet. An archetype is keyed to a concept's **shape**, not its sub
 
 | Shape | Archetype | Subjects |
 |---|---|---|
-| self-similar / nesting | **recursive-descent** (built) | recursion, fractals, nested stories, taxonomy |
-| sequence / process | **sequence** (built) | build pipelines, recipes, history, an algorithm |
+| self-similar / nesting | **character-descent** (built, 2D) | recursion, fractals, nested stories, taxonomy |
+| search / lookup by halving | **binary-search** (built, 2D) | dictionary lookup, guessing games, divide-and-conquer |
+| sequence / process | sequence arena | build pipelines, recipes, history, an algorithm |
 | cause → effect | chain/graph builder | causation, ecosystems |
 | classify / group | sorting arena | taxonomy, parts of speech |
 | trade-off / resource | balance | economics, ecology |
 | state + transition | board of states | phases of matter, grammar tense |
 
-~8–12 archetypes, each re-themeable, cover most of general knowledge. **`recursive-descent` ships with
-two themes over ONE `graph.json`** to prove it: `wizard-well` (code) and `matryoshka` (no code).
-(Honest caveat: nesting is one of the *rarer* shapes; sequence / cause / classify will carry more topics.)
+~8–12 archetypes, each re-themeable, cover most of general knowledge. **`character-descent` ships with
+two themes over ONE `graph.json`** to prove it: `wizard-well` (code) and `matryoshka` (no code); likewise
+`binary-search` skins as `vault-heist` and `library`. Every archetype renders on a 2D **PixiJS** stage
+where a character acts out the concept. (Honest caveat: nesting is one of the *rarer* shapes.)
 
 ## 4. Fixed engine + content-as-data + deterministic gaps
 
@@ -62,11 +64,11 @@ every node) and **retries with the validation error fed back** if it's wrong —
 writes `content/<slug>/` and appends to `content/domains.json`; the app picks up the new playable domain.
 
 A **domain** (a content folder) is decoupled from its **archetype** (the `shape` that renders it), so a
-topic like `how-a-bill-becomes-a-law` uses the `sequence` archetype without being named after it. Heal
-tickets carry both `domain` (where to write) and `shape` (how to author).
+`binary-search` topic can be themed as a library-shelf search or a vault heist without being named after the
+archetype. Heal tickets carry both `domain` (where to write) and `shape` (how to author).
 
-**Proof:** `how-a-bill-becomes-a-law` was authored live from the bare phrase in ~100s — a faithful bicameral
-DAG (draft → introduce → both chambers in parallel → President signs) — and is kept as a committed artifact.
+Authoring targets the two built 2D archetypes: a concept that fits recursion/nesting becomes a
+`character-descent` game; a lookup/search/divide-and-conquer concept becomes a `binary-search` game.
 
 Limits: authored topics currently ship with empty `failureModes` (so the self-heal loop doesn't fire on them
 yet); authoring is a ~1-2 min `claude -p` call and only targets the two existing archetypes, so a concept

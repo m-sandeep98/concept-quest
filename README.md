@@ -57,8 +57,8 @@ src/
   types.ts                     # the GameModule contract + content-graph types
   archetypes/
     registry.ts                # shape -> archetype (add a game = add a line)
-    recursiveDescent/          # archetype #1: engine.ts + RecursiveDescent.tsx + module.ts
-    sequence/                  # archetype #2: engine.ts + Sequence.tsx + module.ts + sequence.css
+    characterDescent/          # archetype #1 (2D/PixiJS): engine.ts + scene.ts + CharacterDescent.tsx + module.ts
+    binarySearch/              # archetype #2 (2D/PixiJS): engine.ts + scene.ts + BinarySearch.tsx + module.ts
   shell/                       # fixed engine, archetype-agnostic (unchanged across both archetypes)
     contentLoader.ts           # reads content-as-data at runtime
     progress.ts                # mastery, gap detection, tickets, localStorage
@@ -70,8 +70,8 @@ server/                        # the OFFLINE half of the loop (no LLM in the pla
   server.mjs                   # ticket queue + /api/tickets/:id/author endpoint
   author.mjs                   # invokes `claude -p` to author a node; deterministic fallback; validates all output
 public/content/
-  recursive-descent/           # graph.json + themes/{wizard-well,matryoshka}.json
-  sequence/                    # graph.json + themes/{ship-it,bake-a-cake}.json
+  character-descent/           # graph.json + themes/{wizard-well,matryoshka}.json
+  binary-search/               # graph.json + themes/{vault-heist,library}.json
 schema/graph.schema.json       # what Claude Code authors against
 ```
 

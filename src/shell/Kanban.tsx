@@ -3,8 +3,8 @@ import { deleteTicket, listTickets, postTicket, type ServerTicket } from "./tick
 
 // A plausible gap per archetype, for the "seed test gap" demo button.
 const SEED: Record<string, { gap: string; spec: string; source: string }> = {
-  "recursive-descent": { gap: "recursive case", spec: "shrinking-drill", source: "demo" },
-  sequence: { gap: "prerequisites", spec: "foundation-drill", source: "demo" },
+  "character-descent": { gap: "recursive case", spec: "shrinking-drill", source: "demo" },
+  "binary-search": { gap: "halve the range", spec: "narrow-drill", source: "demo" },
 };
 
 export default function Kanban({

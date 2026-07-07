@@ -1,13 +1,10 @@
 import type { GameModule } from "../types";
-import { recursiveDescentModule } from "./recursiveDescent/module";
-import { sequenceModule } from "./sequence/module";
 import { characterDescentModule } from "./characterDescent/module";
 import { binarySearchModule } from "./binarySearch/module";
 
 // shape -> archetype. Add a new game type = add one line here + its module.
+// All archetypes render on a 2D (PixiJS) stage behind the GameProps contract.
 export const registry: Record<string, GameModule> = {
-  [recursiveDescentModule.shape]: recursiveDescentModule as GameModule,
-  [sequenceModule.shape]: sequenceModule as GameModule,
   [characterDescentModule.shape]: characterDescentModule as GameModule,
   [binarySearchModule.shape]: binarySearchModule as GameModule,
 };

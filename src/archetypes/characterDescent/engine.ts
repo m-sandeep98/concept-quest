@@ -3,10 +3,9 @@
 // (HARD RULE #4). It produces an animation `trace` a renderer can play frame-by-frame,
 // and the deterministic gap `signals` that feed the shell's self-heal loop.
 //
-// This is a deliberate ISLAND (HARD RULE #2): it shares NO code with recursiveDescent,
-// even though it models the same recursion concept. The point of the prototype is that a
-// different renderer can teach the same shape — so the level/signal contract is identical,
-// but the implementation stands alone.
+// This is a deliberate ISLAND (HARD RULE #2): it shares no code with any other
+// archetype. The level/signal contract is a plain data shape; the implementation
+// stands alone so a different renderer can teach a different concept.
 
 export type BlockId = "stop" | "descend" | "descendSame";
 

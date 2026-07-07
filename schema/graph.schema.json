@@ -6,7 +6,7 @@
   "type": "object",
   "required": ["shape", "themes", "spine", "nodes"],
   "properties": {
-    "shape": { "type": "string", "description": "The archetype that renders every node here, e.g. 'recursive-descent'." },
+    "shape": { "type": "string", "description": "The archetype that renders every node here, e.g. 'character-descent' or 'binary-search'." },
     "themes": { "type": "array", "items": { "type": "string" }, "description": "Theme file ids under ./themes/. Each is a different SUBJECT over the same structure." },
     "spine": { "type": "array", "items": { "type": "string" }, "description": "The top-down motivational ladder: node ids from first to boss." },
     "nodes": {

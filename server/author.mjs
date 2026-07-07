@@ -167,7 +167,7 @@ function buildPrompt(ticket, refs) {
 
   return [
     `You are authoring ONE new remediation "sidequest" node for a browser learning game.`,
-    `Archetype (shape): "${graph.shape}". The player builds/arranges a rule and runs it; wrong builds visibly fail.`,
+    `Archetype (shape): "${graph.shape}". The player interacts on a 2D stage to solve it; wrong approaches visibly fail and emit gap signals.`,
     `A learner has a GAP on the concept: "${ticket.gap}". Author a focused, slightly-easier drill that reinforces exactly that concept.`,
     ``,
     `Return ONLY a JSON object (no prose, no markdown) of exactly this shape:`,
@@ -177,9 +177,9 @@ function buildPrompt(ticket, refs) {
     `Rules:`,
     `- node.level MUST be structurally valid for shape "${graph.shape}" and SOLVABLE.`,
     `- Every theme entry needs: title, hook, winText, and failText (keys matching the failure tags shown in the examples).`,
-    graph.shape === "sequence"
-      ? `- For sequence: node.level.steps is [{id, needs:[ids]}]; there must be at least one step with needs [] and no cycles. Each theme entry needs extra.steps with a {label, icon} for EVERY step id.`
-      : `- For recursive-descent: node.level has {startDepth:int, preplaced:[blocks], palette:[blocks]} where blocks are "stop"|"descend"|"descendSame"; "stop" and "descend" must be obtainable (preplaced or palette).`,
+    graph.shape === "binary-search"
+      ? `- For binary-search: node.level = {values:[strictly-ascending ints], targetIndex:int in range, budget?:int}. failText keys are "not-halving" and "ignored-feedback".`
+      : `- For character-descent: node.level has {startDepth:int, preplaced:[blocks], palette:[blocks]} where blocks are "stop"|"descend"|"descendSame"; "stop" and "descend" must be obtainable (preplaced or palette).`,
     `- Anything referenced in themes (step ids / blocks) must exist in node.level.`,
     ``,
     `EXAMPLE node.level:`,
@@ -214,7 +214,7 @@ function topoOrThrow(steps) {
 }
 
 function validateLevel(shape, level) {
-  if (shape === "recursive-descent") {
+  if (shape === "character-descent") {
     if (!level || typeof level.startDepth !== "number") throw new Error("level.startDepth must be a number");
     const V = ["stop", "descend", "descendSame"];
     const pre = Array.isArray(level.preplaced) ? level.preplaced : [];
@@ -222,35 +222,26 @@ function validateLevel(shape, level) {
     for (const b of [...pre, ...pal]) if (!V.includes(b)) throw new Error(`invalid block "${b}"`);
     const all = new Set([...pre, ...pal]);
     if (!all.has("stop") || !all.has("descend")) throw new Error("not solvable: needs stop + descend obtainable");
-  } else if (shape === "sequence") {
-    if (!level || !Array.isArray(level.steps) || level.steps.length < 2) throw new Error("level.steps must have >= 2 steps");
-    const ids = new Set(level.steps.map((s) => s.id));
-    if (ids.size !== level.steps.length) throw new Error("duplicate step ids");
-    let hasRoot = false;
-    for (const s of level.steps) {
-      if (typeof s.id !== "string") throw new Error("step id must be a string");
-      const needs = Array.isArray(s.needs) ? s.needs : [];
-      if (needs.length === 0) hasRoot = true;
-      for (const n of needs) if (!ids.has(n)) throw new Error(`step "${s.id}" needs missing id "${n}"`);
-    }
-    if (!hasRoot) throw new Error("no starting step (one with needs [])");
-    topoOrThrow(level.steps.map((s) => ({ id: s.id, needs: s.needs || [] })));
+  } else if (shape === "binary-search") {
+    const vals = level && level.values;
+    if (!Array.isArray(vals) || vals.length < 2 || !vals.every((n) => typeof n === "number"))
+      throw new Error("level.values must be an array of >= 2 numbers");
+    for (let i = 1; i < vals.length; i += 1)
+      if (vals[i] <= vals[i - 1]) throw new Error("level.values must be strictly ascending");
+    if (typeof level.targetIndex !== "number" || level.targetIndex < 0 || level.targetIndex >= vals.length)
+      throw new Error("level.targetIndex out of range");
   } else {
     throw new Error(`unknown shape "${shape}"`);
   }
 }
 
-function validateThemeEntry(shape, e, level) {
+function validateThemeEntry(shape, e, _level) {
   if (!e || typeof e.title !== "string" || typeof e.hook !== "string" || typeof e.winText !== "string") {
     throw new Error("theme entry needs title, hook, winText");
   }
-  if (shape === "sequence") {
-    const steps = e.extra && e.extra.steps;
-    if (!steps) throw new Error("sequence theme entry needs extra.steps");
-    for (const s of level.steps) {
-      if (!steps[s.id] || typeof steps[s.id].label !== "string") throw new Error(`missing step label for "${s.id}"`);
-    }
-  }
+  // Both 2D archetypes (character-descent, binary-search) theme purely through the
+  // node's title/hook/winText/failText plus the theme-level vocab/visual — there is
+  // no per-node `extra` payload to validate.
 }
 
 function finalize(ticket, partial, refs) {
@@ -357,10 +348,10 @@ export async function applyAuthored(shape, authored, root) {
 const titleCase = (s) => String(s).replace(/\b\w/g, (c) => c.toUpperCase());
 
 const ARCHETYPE_BLURB = {
-  sequence:
-    "ordering / process / dependencies — steps that must happen in a valid order (recipes, pipelines, procedures, histories, life cycles, algorithms).",
-  "recursive-descent":
-    "self-similar nesting — a thing that contains a smaller copy of itself until a base case (recursion, fractals, nested structures, Russian dolls).",
+  "character-descent":
+    "self-similar nesting — a character descends into a thing that contains a smaller copy of itself until a base case (recursion, fractals, nested structures, Russian dolls).",
+  "binary-search":
+    "search by halving — repeatedly split a SORTED range in half to home in on a target (lookup, guessing games, dictionary/library search, divide-and-conquer).",
 };
 
 async function loadExample(root, shape) {
@@ -370,15 +361,17 @@ async function loadExample(root, shape) {
   return { shape, blurb: ARCHETYPE_BLURB[shape] ?? shape, graph, theme };
 }
 
-function buildTopicPrompt(concept, seq, lastErr) {
+function buildTopicPrompt(concept, examples, lastErr) {
   const fix = lastErr
     ? `\nPREVIOUS ATTEMPT FAILED VALIDATION: ${lastErr}\nFix exactly that and return corrected JSON.\n`
     : "";
+  const cd = examples["character-descent"];
+  const bs = examples["binary-search"];
   return [
     `Author a COMPLETE, concise playable learning game for the concept: "${concept}".`,
-    `Pick the archetype whose SHAPE fits best:`,
-    `- "sequence": ordering / process / dependencies (procedures, recipes, pipelines, histories, life cycles). PREFER THIS for most concepts.`,
-    `- "recursive-descent": self-similar nesting (recursion, fractals, nested structures). Only if the concept literally nests inside itself.`,
+    `Both archetypes render on a 2D stage where a character acts out the idea. Pick the SHAPE that fits best:`,
+    `- "character-descent": self-similar nesting / recursion — a character descends into smaller copies until a base case. Choose if the concept literally nests inside itself.`,
+    `- "binary-search": searching a SORTED range by halving (lookup, guessing, dictionary/library search, divide-and-conquer). Choose for find/lookup/guess concepts.`,
     ``,
     `Make a SMALL curriculum: 4-5 nodes — one intro level (prereqs []), 1-2 middle levels, ONE boss (highest tier),`,
     `and ONE sidequest (type "sidequest", prereqs []) that reinforces the main idea — each teaching ONE idea, with`,
@@ -388,14 +381,17 @@ function buildTopicPrompt(concept, seq, lastErr) {
     `{"shape":"<shape>","label":"<emoji + short title>","graph":{"shape":"<shape>","themes":["<themeId>"],"spine":[<level ids>],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
     `Node = {id,type:("level"|"boss"|"sidequest"),concept,tier:int,prereqs:[ids],shape,level,failureModes:[]}. Leave failureModes [] (added automatically). Prereqs acyclic; theme covers EVERY node id.`,
     ``,
-    `If you choose "sequence", copy THIS working example's structure EXACTLY — node.level = {steps:[{id,needs:[ids]}]};`,
-    `each theme node entry has extra.steps {"<stepId>":{"label","icon"}} for EVERY step id; theme has vocab.run + visual{accent,actorIcon}:`,
-    JSON.stringify(seq.graph),
-    JSON.stringify(seq.theme),
-    ``,
-    `If you choose "recursive-descent": node.level = {startDepth:int,preplaced:[blocks],palette:[blocks],requiredBlocks:["stop","descend"]}`,
+    `If you choose "character-descent": node.level = {startDepth:int,preplaced:[blocks],palette:[blocks],requiredBlocks:["stop","descend"]}`,
     `with blocks in "stop"|"descend"|"descendSame" (stop+descend obtainable). Theme has vocab{run,stop,descend,descendSame,unit,depthLabel}`,
-    `+ visual{accent,actorIcon,containerShape,coreIcon}; each node entry {title,hook,winText,failText?}.`,
+    `+ visual{accent,actorIcon,containerShape,coreIcon}; each node entry {title,hook,winText,failText?}. COPY THIS WORKING EXAMPLE's structure:`,
+    JSON.stringify(cd.graph),
+    JSON.stringify(cd.theme),
+    ``,
+    `If you choose "binary-search": node.level = {values:[strictly-ascending ints],targetIndex:int,budget:int}.`,
+    `Theme has vocab{target,higher,lower,probeWord,hint} + visual{accent,actorIcon,coreIcon}; each node entry {title,hook,winText,failText?}`,
+    `with failText keys "not-halving" and "ignored-feedback". COPY THIS WORKING EXAMPLE's structure:`,
+    JSON.stringify(bs.graph),
+    JSON.stringify(bs.theme),
     fix,
   ].join("\n");
 }
@@ -411,7 +407,7 @@ function normalizeTopic(concept, parsed) {
 }
 
 function validateGraph(shape, graph, themes) {
-  if (shape !== "sequence" && shape !== "recursive-descent") throw new Error(`unknown shape "${shape}"`);
+  if (shape !== "character-descent" && shape !== "binary-search") throw new Error(`unknown shape "${shape}"`);
   if (!Array.isArray(graph.nodes) || graph.nodes.length < 3) throw new Error("need >= 3 nodes");
   const ids = new Set(graph.nodes.map((n) => n.id));
   if (ids.size !== graph.nodes.length) throw new Error("duplicate node ids");
@@ -441,9 +437,13 @@ function validateGraph(shape, graph, themes) {
     if (!t) throw new Error(`missing theme "${tid}"`);
     if (!t.label || !t.subject || !t.bossHook || !t.visual?.accent || !t.visual?.actorIcon)
       throw new Error(`theme "${tid}" missing label/subject/bossHook/visual`);
-    if (!t.vocab?.run) throw new Error(`theme "${tid}" needs vocab.run`);
-    if (shape === "recursive-descent" && (!t.vocab.stop || !t.vocab.descend || !t.vocab.descendSame))
-      throw new Error(`theme "${tid}" needs vocab.stop/descend/descendSame`);
+    if (shape === "character-descent") {
+      if (!t.vocab?.run) throw new Error(`theme "${tid}" needs vocab.run`);
+      if (!t.vocab.stop || !t.vocab.descend || !t.vocab.descendSame)
+        throw new Error(`theme "${tid}" needs vocab.stop/descend/descendSame`);
+    }
+    // binary-search themes read vocab.target/higher/lower/probeWord/hint, all with
+    // in-component fallbacks, so none are hard-required here.
     for (const n of graph.nodes) validateThemeEntry(shape, t.nodes?.[n.id], n.level);
   }
 }
@@ -452,13 +452,13 @@ function validateGraph(shape, graph, themes) {
 // model to author correct tags, the server attaches the canonical failure modes
 // deterministically — so authored topics get a working self-heal loop for free.
 const FAILURE_MODES = {
-  sequence: [
-    { tag: "dependency-violation", minCount: 2, gap: "prerequisites", primary: true },
-    { tag: "wrong-start", minCount: 2, gap: "the starting point", remediation: "generate:find-the-start-drill" },
-  ],
-  "recursive-descent": [
+  "character-descent": [
     { tag: "missing-base-case", minCount: 2, gap: "base case", primary: true },
     { tag: "no-progress", minCount: 2, gap: "recursive case", remediation: "generate:shrinking-drill" },
+  ],
+  "binary-search": [
+    { tag: "not-halving", minCount: 2, gap: "halve the range", primary: true },
+    { tag: "ignored-feedback", minCount: 2, gap: "use the feedback", remediation: "generate:feedback-drill" },
   ],
 };
 
@@ -487,17 +487,20 @@ export function attachFailureModes(shape, graph) {
 }
 
 export async function authorTopic(concept, root, { attempts = 2, onLog, onText } = {}) {
-  let seq;
+  let examples;
   try {
-    seq = await loadExample(root, "sequence");
+    examples = {
+      "character-descent": await loadExample(root, "character-descent"),
+      "binary-search": await loadExample(root, "binary-search"),
+    };
   } catch {
-    throw new Error("missing sequence reference content");
+    throw new Error("missing 2D reference content (character-descent / binary-search)");
   }
   let lastErr = "";
   for (let i = 0; i < attempts; i += 1) {
     try {
       onLog?.(`▸ Asking Claude Code to classify "${concept}" and author a full game… (attempt ${i + 1})`);
-      const text = await runClaudeStream(buildTopicPrompt(concept, seq, lastErr), { onLog, onText }, 300000);
+      const text = await runClaudeStream(buildTopicPrompt(concept, examples, lastErr), { onLog, onText }, 300000);
       onLog?.("▸ Parsing and validating the authored graph…");
       const topic = normalizeTopic(concept, parseJson(text));
       attachFailureModes(topic.shape, topic.graph);

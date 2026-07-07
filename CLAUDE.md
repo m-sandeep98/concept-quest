@@ -7,8 +7,10 @@ Read this first. It's the map, the rules, and the recipes. Deep rationale lives 
 
 Gamify **any** concept into levels. A **fixed engine reads content-as-data**: an `archetype` (a
 concept's *shape*, e.g. recursion) renders many `themes` (a concept's *subject*, e.g. wizard's well /
-nesting dolls) over ONE structural `graph.json`. Claude Code **authors** content offline (`claude -p`);
-**no LLM runs at play-time.** Gap detection is deterministic, from play states.
+nesting dolls) over ONE structural `graph.json`. Every archetype renders on a **2D PixiJS canvas** (a
+`scene.ts` renderer driven by the pure engine) where a character acts out the concept. Claude Code
+**authors** content offline (`claude -p`); **no LLM runs at play-time.** Gap detection is deterministic,
+from play states.
 
 ## Commands
 
@@ -30,8 +32,8 @@ src/
                               contentLoader, progress, tickets, authoring). Knows NO specific game.
   archetypes/
     registry.ts               shape -> GameModule. The single wiring point.
-    recursiveDescent/         Component.tsx + engine.ts (pure) + module.ts (GameModule)
-    sequence/                 Component.tsx + engine.ts (pure) + module.ts (GameModule)
+    characterDescent/         Component.tsx + scene.ts (PixiJS renderer) + engine.ts (pure) + module.ts
+    binarySearch/             Component.tsx + scene.ts (PixiJS renderer) + engine.ts (pure) + module.ts
 public/content/<domain>/      authored data: graph.json + themes/*.json  (NOT code — file drops)
 server/                       offline `claude -p` authoring (author.mjs) + SSE server (server.mjs)
 schema/graph.schema.json      JSON Schema for authored graphs
@@ -46,7 +48,7 @@ schema/graph.schema.json      JSON Schema for authored graphs
 
 1. **The shell never imports archetype internals.** `src/shell/**` imports from `types.ts` only, never
    from `src/archetypes/**`. (An archetype is reached indirectly, via the registry, from `App`.)
-2. **Archetypes never import each other.** `recursiveDescent/**` and `sequence/**` are islands.
+2. **Archetypes never import each other.** `characterDescent/**` and `binarySearch/**` are islands.
 3. **Only `App.tsx` touches the registry.** Everything else meets at the `GameModule` contract.
 4. **Engines are pure & deterministic.** `archetypes/*/engine.ts` has no React, no I/O, no randomness;
    it computes play results and emits the gap signals. It is the correctness-critical code — keep it unit-testable.
@@ -58,9 +60,11 @@ Before finishing a change, sanity-check rules 1–3 with the graph (below) or:
 
 ## Recipe: add an archetype (the extension primitive)
 
-1. `src/archetypes/<shape>/` — `Component.tsx` (behind `GameProps`), pure `engine.ts` (emits signals),
-   `module.ts` exporting a `GameModule { shape, label, component, validate }`.
-   `validate` **guards CC-authored data at the boundary** — throw on malformed input.
+1. `src/archetypes/<shape>/` — `Component.tsx` (behind `GameProps`) mounting a **PixiJS stage via
+   `scene.ts`** (the imperative renderer), pure `engine.ts` (emits signals), and `module.ts` exporting a
+   `GameModule { shape, label, component, validate }`. `validate` **guards CC-authored data at the
+   boundary** — throw on malformed input. Keep `engine.ts` free of React/Pixi — the scene only *draws*
+   the engine's output, so the correctness-critical logic stays pure and testable.
 2. Register **one line** in `src/archetypes/registry.ts`.
 3. Author `public/content/<domain>/graph.json` + `themes/*.json` (each node's `shape` = your new shape).
 

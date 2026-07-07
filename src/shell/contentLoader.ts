@@ -71,7 +71,7 @@ export async function loadDomainsIndex(): Promise<DomainEntry[]> {
     /* fall through to defaults */
   }
   return [
-    { slug: "recursive-descent", label: "🌀 Recursion" },
-    { slug: "sequence", label: "📋 Sequence / Process" },
+    { slug: "character-descent", label: "🌀 Recursion" },
+    { slug: "binary-search", label: "🔍 Binary Search" },
   ];
 }

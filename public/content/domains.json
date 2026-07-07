@@ -1,28 +1,12 @@
 {
   "domains": [
     {
-      "slug": "recursive-descent",
+      "slug": "character-descent",
       "label": "🌀 Recursion"
     },
     {
-      "slug": "character-descent",
-      "label": "🎮 Recursion (2D character)"
-    },
-    {
       "slug": "binary-search",
-      "label": "🔍 Binary Search (2D)"
-    },
-    {
-      "slug": "sequence",
-      "label": "📋 Sequence / Process"
-    },
-    {
-      "slug": "how-a-bill-becomes-a-law",
-      "label": "🏛️ How a Bill Becomes a Law"
-    },
-    {
-      "slug": "why-are-vllms-used",
-      "label": "⚡ Why vLLM?"
+      "label": "🔍 Binary Search"
     }
   ]
 }
