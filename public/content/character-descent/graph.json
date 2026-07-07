@@ -1,0 +1,201 @@
+{
+  "shape": "character-descent",
+  "themes": [
+    "wizard-well",
+    "matryoshka"
+  ],
+  "spine": [
+    "intro-return",
+    "base-case",
+    "recursive-case",
+    "boss-descent"
+  ],
+  "nodes": [
+    {
+      "id": "intro-return",
+      "type": "level",
+      "concept": "the value returns",
+      "role": "return",
+      "tier": 1,
+      "prereqs": [],
+      "shape": "character-descent",
+      "level": {
+        "startDepth": 1,
+        "preplaced": [
+          "stop",
+          "descend"
+        ],
+        "palette": [],
+        "requiredBlocks": [
+          "stop",
+          "descend"
+        ]
+      },
+      "failureModes": []
+    },
+    {
+      "id": "base-case",
+      "type": "level",
+      "concept": "base case",
+      "role": "baseCase",
+      "tier": 2,
+      "prereqs": [
+        "intro-return"
+      ],
+      "shape": "character-descent",
+      "level": {
+        "startDepth": 3,
+        "preplaced": [
+          "descend"
+        ],
+        "palette": [
+          "stop"
+        ],
+        "requiredBlocks": [
+          "stop",
+          "descend"
+        ]
+      },
+      "failureModes": [
+        {
+          "signal": {
+            "tag": "missing-base-case",
+            "minCount": 2
+          },
+          "gap": "base case",
+          "remediation": "sidequest:bottomless-pit"
+        }
+      ]
+    },
+    {
+      "id": "recursive-case",
+      "type": "level",
+      "concept": "recursive case",
+      "role": "recursiveCase",
+      "tier": 3,
+      "prereqs": [
+        "base-case"
+      ],
+      "shape": "character-descent",
+      "level": {
+        "startDepth": 3,
+        "preplaced": [
+          "stop"
+        ],
+        "palette": [
+          "descend",
+          "descendSame"
+        ],
+        "requiredBlocks": [
+          "stop",
+          "descend"
+        ]
+      },
+      "failureModes": [
+        {
+          "signal": {
+            "tag": "no-progress",
+            "minCount": 2
+          },
+          "gap": "recursive case",
+          "remediation": "generate:shrinking-drill"
+        }
+      ]
+    },
+    {
+      "id": "boss-descent",
+      "type": "boss",
+      "concept": "base case + recursive case",
+      "role": "boss",
+      "tier": 4,
+      "prereqs": [
+        "recursive-case"
+      ],
+      "shape": "character-descent",
+      "level": {
+        "startDepth": 4,
+        "preplaced": [],
+        "palette": [
+          "stop",
+          "descend",
+          "descendSame"
+        ],
+        "requiredBlocks": [
+          "stop",
+          "descend"
+        ]
+      },
+      "failureModes": [
+        {
+          "signal": {
+            "tag": "missing-base-case",
+            "minCount": 2
+          },
+          "gap": "base case",
+          "remediation": "sidequest:bottomless-pit"
+        },
+        {
+          "signal": {
+            "tag": "no-progress",
+            "minCount": 2
+          },
+          "gap": "recursive case",
+          "remediation": "generate:shrinking-drill"
+        }
+      ]
+    },
+    {
+      "id": "bottomless-pit",
+      "type": "sidequest",
+      "concept": "base case",
+      "role": "baseCase",
+      "tier": 2,
+      "prereqs": [],
+      "hidden": true,
+      "remediates": "base-case",
+      "clearsGap": "base case",
+      "shape": "character-descent",
+      "level": {
+        "startDepth": 2,
+        "preplaced": [
+          "descend"
+        ],
+        "palette": [
+          "stop"
+        ],
+        "requiredBlocks": [
+          "stop",
+          "descend"
+        ]
+      },
+      "failureModes": []
+    },
+    {
+      "id": "heal-recursive-case",
+      "type": "sidequest",
+      "concept": "recursive case",
+      "tier": 3,
+      "prereqs": [],
+      "hidden": true,
+      "remediates": "recursive-case",
+      "clearsGap": "recursive case",
+      "shape": "character-descent",
+      "authored": true,
+      "level": {
+        "startDepth": 2,
+        "preplaced": [
+          "stop"
+        ],
+        "palette": [
+          "descend",
+          "descendSame"
+        ],
+        "requiredBlocks": [
+          "stop",
+          "descend"
+        ]
+      },
+      "failureModes": []
+    }
+  ]
+}

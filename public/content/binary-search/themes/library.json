@@ -1,0 +1,55 @@
+{
+  "id": "library",
+  "label": "The Sorted Shelf",
+  "subject": "Binary search (books on a shelf)",
+  "bossHook": "Sixteen books shelved by call number, and a reader waiting. Four checks to find the right spine — split the shelf in half each time.",
+  "vocab": {
+    "target": "CALL №",
+    "higher": "further right",
+    "lower": "further left",
+    "probeWord": "checks",
+    "hint": "Pull the MIDDLE book — its number tells you which half to search — then split what's left again."
+  },
+  "visual": {
+    "accent": "#3ad0b0",
+    "coreIcon": "📖",
+    "actorIcon": "🧑‍🏫"
+  },
+  "nodes": {
+    "first-cut": {
+      "title": "Start in the Middle",
+      "hook": "Eight books, shelved in order. A beginner starts at book one. A librarian pulls the MIDDLE book — its number says which way to go.",
+      "winText": "Middle first, then the middle of the half that was left. Sorted shelves are made for this."
+    },
+    "halving": {
+      "title": "Halve the Shelf",
+      "hook": "Twelve books. Each check should discard HALF the shelf — not slide over one spine at a time.",
+      "winText": "Every check tossed half the shelf. Twelve books down to one in a few pulls — that's the payoff of sorted order.",
+      "failText": {
+        "not-halving": "You found it, but you slid book by book. Pull the MIDDLE of what's left each time and the shelf halves with every check."
+      }
+    },
+    "trust-clues": {
+      "title": "Believe the Number",
+      "hook": "Each pulled book's number rules out a whole side of the shelf (it greys out). Never re-check a greyed-out book.",
+      "winText": "You trusted every call number and stayed on the live side of the shelf. That discipline is what keeps the search fast.",
+      "failText": {
+        "ignored-feedback": "You pulled a book the numbers had already ruled out. A greyed side can't hold the target — keep every check inside the live range."
+      }
+    },
+    "boss-vault": {
+      "title": "BOSS · The Long Shelf",
+      "hook": "Sixteen books. Four checks. Middle, then middle, then middle — a clean binary search or the reader walks.",
+      "winText": "Sixteen books to one in four clean checks. A perfect binary search — the reader has their book.",
+      "failText": {
+        "not-halving": "Too many checks — you didn't halve. Sixteen books needs only four middle-pulls.",
+        "ignored-feedback": "You re-checked a greyed-out book. Trust every number — that's what makes four checks enough."
+      }
+    },
+    "narrow-drill": {
+      "title": "SIDE-QUEST · Middle Every Time",
+      "hook": "Drill one habit: after each check, go to the MIDDLE of whatever's still lit. Eight books, go.",
+      "winText": "Middle every time — you halved the shelf on every check. That habit IS binary search."
+    }
+  }
+}

@@ -1,0 +1,51 @@
+/* character-descent archetype — the Pixi stage + its framing. Build controls reuse
+   the shared .rd-* classes from index.css so the two recursion archetypes read alike. */
+
+.cd {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cd-stage-wrap {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--r, 14px);
+  background: radial-gradient(120% 90% at 50% 0%, rgba(53, 224, 255, 0.06), transparent 60%), var(--panel, #0a0f1e);
+  padding: 10px;
+  overflow: hidden;
+}
+
+/* subtle animated scanline sheen so the canvas reads as a "console viewport" */
+.cd-stage-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 0, 0, 0.14) 3px 4px);
+  opacity: 0.25;
+  mix-blend-mode: overlay;
+}
+
+.cd-stage {
+  position: relative;
+  z-index: 1;
+  min-height: 160px;
+}
+
+.cd-boot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--muted, #7f93b8);
+  letter-spacing: 0.04em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-stage-wrap::after {
+    display: none;
+  }
+}

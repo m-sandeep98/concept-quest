@@ -1,0 +1,55 @@
+{
+  "id": "vault-heist",
+  "label": "The Vault Heist",
+  "subject": "Binary search (code)",
+  "bossHook": "Sixteen vaults, one holds the loot, and you get four tries. Split the row in half every time and the safe number can't hide.",
+  "vocab": {
+    "target": "TARGET",
+    "higher": "higher up",
+    "lower": "lower down",
+    "probeWord": "tries",
+    "hint": "Crack a vault to see if the target is higher or lower — then always split what's LEFT in half."
+  },
+  "visual": {
+    "accent": "#f5b73d",
+    "coreIcon": "💎",
+    "actorIcon": "🕵️"
+  },
+  "nodes": {
+    "first-cut": {
+      "title": "The First Cut",
+      "hook": "Eight vaults, sorted low to high. Don't start at the end — crack the MIDDLE one first. It tells you which half the target hides in.",
+      "winText": "One cut down the middle, then the middle of what was left. That halving is the whole trick behind binary search."
+    },
+    "halving": {
+      "title": "Cut It in Half",
+      "hook": "Twelve vaults now. Each crack should throw away HALF of what's left — not shuffle along one at a time.",
+      "winText": "You threw away half the vaults with every crack — twelve narrowed to one in a handful of tries. That's logarithmic speed.",
+      "failText": {
+        "not-halving": "You found it, but you crept along one vault at a time. Crack the MIDDLE of the remaining range each try and it collapses in half every step."
+      }
+    },
+    "trust-clues": {
+      "title": "Trust the Clues",
+      "hook": "After a crack, a 'higher/lower' clue rules out a whole side of the row (it dims). Never re-check a ruled-out vault.",
+      "winText": "You believed the clues and never re-opened a dimmed vault. Every probe should live inside the range the feedback leaves alive.",
+      "failText": {
+        "ignored-feedback": "You cracked a vault the clues had already ruled out — a wasted try. Once a side is dimmed, the target CANNOT be there. Stay inside the live range."
+      }
+    },
+    "boss-vault": {
+      "title": "BOSS · The Grand Vault",
+      "hook": "Sixteen vaults. Four tries. No margin. Middle, then middle, then middle — perfect binary search or nothing.",
+      "winText": "Sixteen down to one in four clean cuts. That's a flawless binary search — heist complete.",
+      "failText": {
+        "not-halving": "Too many tries — you didn't halve hard enough. Sixteen vaults needs only four perfect cuts.",
+        "ignored-feedback": "You opened a ruled-out vault under pressure. Trust every clue — it's what makes four tries enough."
+      }
+    },
+    "narrow-drill": {
+      "title": "SIDE-QUEST · Narrow It Down",
+      "hook": "Let's drill ONE reflex until it's automatic: after every crack, jump to the MIDDLE of whatever's still lit. Eight vaults, go.",
+      "winText": "Middle, middle, middle — you cut the range in half every single time. That reflex IS binary search."
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "id": "wizard-well",
+  "label": "The Wizard's Well",
+  "subject": "Recursion (code)",
+  "bossHook": "Assemble a spell that descends the well, grabs the treasure at the bottom, and returns all the way back up.",
+  "vocab": {
+    "run": "Cast spell",
+    "stop": "STOP  ·  if n = 0, grab 💎 & return",
+    "descend": "DESCEND  ·  cast on room (n − 1)",
+    "descendSame": "DESCEND  ·  cast on room (n)  ⚠ same n",
+    "unit": "room",
+    "depthLabel": "n"
+  },
+  "visual": {
+    "accent": "#7c5cff",
+    "containerShape": "square",
+    "coreIcon": "💎",
+    "actorIcon": "🧙"
+  },
+  "nodes": {
+    "intro-return": {
+      "title": "The Returning Gem",
+      "hook": "A spell doesn't just go down — it hands its result back UP, room by room. Cast it and watch the value return.",
+      "winText": "n hit 0, the wizard grabbed 💎, and it returned all the way back up the well. That return trip is recursion 'unwinding'."
+    },
+    "base-case": {
+      "title": "The Place to Stop",
+      "hook": "This spell descends… but never stops. Add a STOP block so it grabs the treasure at n = 0 instead of falling forever.",
+      "winText": "The STOP block caught n = 0 — treasure grabbed, spell unwinds home. That stop is the BASE CASE.",
+      "failText": {
+        "missing-base-case": "No STOP block. The wizard fell past the bottom into the endless dark — STACK OVERFLOW. Every recursion needs a base case."
+      }
+    },
+    "recursive-case": {
+      "title": "Marching Down",
+      "hook": "You've got a STOP at n = 0 — but the spell has to actually MOVE toward it. Add a DESCEND that casts on a SMALLER room (n − 1).",
+      "winText": "Each cast shrank n by one until STOP fired. Shrinking toward the base case is the RECURSIVE CASE.",
+      "failText": {
+        "no-progress": "Your DESCEND cast on the SAME room (n), so n never shrank and n = 0 never came. The recursive call must move toward the base case."
+      }
+    },
+    "boss-descent": {
+      "title": "BOSS · The Deep Well",
+      "hook": "No blocks placed. Build the whole spell: a STOP at the bottom AND a DESCEND that shrinks. Four rooms deep. Go.",
+      "winText": "Base case + shrinking recursive case, built from scratch. Boss down. That is recursion.",
+      "failText": {
+        "missing-base-case": "No STOP — it fell forever. STACK OVERFLOW.",
+        "no-progress": "It never shrank toward n = 0 — infinite descent."
+      }
+    },
+    "bottomless-pit": {
+      "title": "SIDE-QUEST · The Bottomless Pit",
+      "hook": "You kept falling in. Let's drill ONE thing until it's automatic: place the STOP so the spell knows when to quit.",
+      "winText": "STOP placed, pit escaped. The base case is the exit door — no recursion is safe without it.",
+      "failText": {
+        "missing-base-case": "Still no STOP — still falling. The base case has to be checked BEFORE the descend."
+      }
+    },
+    "heal-recursive-case": {
+      "title": "One Step Closer",
+      "hook": "Your STOP is set for n = 0 — the base case is ready. Now the recursive step must actually MOVE toward it. Pick the DESCEND that re-casts on a SMALLER room (n − 1) instead of the same one.",
+      "winText": "n went 2 → 1 → 0, and STOP fired at the bottom. A recursive step that shrinks n toward the base case IS the RECURSIVE CASE — that's the whole trick.",
+      "failText": {
+        "no-progress": "Your step re-cast on the SAME room (n stayed 2), so it never shrank and n = 0 never arrived — the well overflowed. The recursive case has to hand a SMALLER problem to the next call."
+      }
+    }
+  }
+}

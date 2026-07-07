@@ -1,0 +1,108 @@
+{
+  "shape": "binary-search",
+  "themes": ["vault-heist", "library"],
+  "spine": ["first-cut", "halving", "trust-clues", "boss-vault"],
+  "nodes": [
+    {
+      "id": "first-cut",
+      "type": "level",
+      "concept": "check the middle",
+      "role": "intro",
+      "tier": 1,
+      "prereqs": [],
+      "shape": "binary-search",
+      "level": {
+        "values": [4, 9, 13, 20, 28, 35, 44, 52],
+        "targetIndex": 5,
+        "budget": 4
+      },
+      "failureModes": []
+    },
+    {
+      "id": "halving",
+      "type": "level",
+      "concept": "halve the range",
+      "role": "halving",
+      "tier": 2,
+      "prereqs": ["first-cut"],
+      "shape": "binary-search",
+      "level": {
+        "values": [2, 7, 11, 16, 19, 24, 30, 33, 41, 48, 55, 60],
+        "targetIndex": 9,
+        "budget": 5
+      },
+      "failureModes": [
+        {
+          "signal": { "tag": "not-halving", "minCount": 2 },
+          "gap": "halve the range",
+          "remediation": "sidequest:narrow-drill"
+        }
+      ]
+    },
+    {
+      "id": "trust-clues",
+      "type": "level",
+      "concept": "use the feedback",
+      "role": "feedback",
+      "tier": 3,
+      "prereqs": ["halving"],
+      "shape": "binary-search",
+      "level": {
+        "values": [3, 8, 14, 21, 27, 34, 39, 46, 50, 58, 63, 70],
+        "targetIndex": 2,
+        "budget": 5
+      },
+      "failureModes": [
+        {
+          "signal": { "tag": "ignored-feedback", "minCount": 2 },
+          "gap": "use the feedback",
+          "remediation": "generate:feedback-drill"
+        }
+      ]
+    },
+    {
+      "id": "boss-vault",
+      "type": "boss",
+      "concept": "binary search",
+      "role": "boss",
+      "tier": 4,
+      "prereqs": ["trust-clues"],
+      "shape": "binary-search",
+      "level": {
+        "values": [5, 9, 12, 18, 23, 29, 34, 38, 42, 47, 53, 59, 64, 68, 73, 80],
+        "targetIndex": 12,
+        "budget": 4
+      },
+      "failureModes": [
+        {
+          "signal": { "tag": "not-halving", "minCount": 2 },
+          "gap": "halve the range",
+          "remediation": "sidequest:narrow-drill"
+        },
+        {
+          "signal": { "tag": "ignored-feedback", "minCount": 2 },
+          "gap": "use the feedback",
+          "remediation": "generate:feedback-drill"
+        }
+      ]
+    },
+    {
+      "id": "narrow-drill",
+      "type": "sidequest",
+      "concept": "halve the range",
+      "role": "halving",
+      "tier": 2,
+      "prereqs": [],
+      "hidden": true,
+      "remediates": "halving",
+      "clearsGap": "halve the range",
+      "shape": "binary-search",
+      "level": {
+        "values": [6, 12, 19, 25, 33, 40, 48, 57],
+        "targetIndex": 3,
+        "budget": 4
+      },
+      "failureModes": []
+    }
+  ]
+}

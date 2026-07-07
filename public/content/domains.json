@@ -5,6 +5,14 @@
       "label": "🌀 Recursion"
     },
     {
+      "slug": "character-descent",
+      "label": "🎮 Recursion (2D character)"
+    },
+    {
+      "slug": "binary-search",
+      "label": "🔍 Binary Search (2D)"
+    },
+    {
       "slug": "sequence",
       "label": "📋 Sequence / Process"
     },

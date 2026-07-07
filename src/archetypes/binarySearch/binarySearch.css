@@ -1,0 +1,71 @@
+/* binary-search archetype — HUD + Pixi stage. Reuses the shared .rd-* control/outcome
+   classes from index.css (the design system) for the win/fail panels. */
+
+.bs {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bs-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 14px;
+}
+
+.bs-target {
+  color: var(--muted, #7f93b8);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.bs-target b {
+  color: var(--accent);
+  font-size: 20px;
+  margin-left: 4px;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.bs-probes {
+  color: var(--faint, #566);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+.bs-probes.over {
+  color: #ff8a5c;
+  border-color: rgba(255, 138, 92, 0.5);
+}
+
+.bs-hint {
+  color: var(--muted, #7f93b8);
+  font-size: 13px;
+}
+
+/* Viewport frame — mirrors the descent archetype's stage so the two 2D games read as
+   one family, but with island-local class names (no cross-archetype CSS coupling). */
+.bs-stage-wrap {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--r, 14px);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%), var(--panel, #0a0f1e);
+  padding: 10px;
+  overflow: hidden;
+}
+.bs-stage {
+  position: relative;
+  z-index: 1;
+  min-height: 130px;
+}
+.bs-boot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--muted, #7f93b8);
+}
