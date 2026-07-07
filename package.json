@@ -4,6 +4,15 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Gamify any concept into levels. A fixed engine + content-as-data, with a library of themeable game archetypes.",
+  "license": "MIT",
+  "author": "Sandeep Mishra",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m-sandeep98/concept-quest.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

@@ -76,6 +76,22 @@ const BANNED_ENGINE = [
   [/\b(window|document|localStorage)\b/, "DOM/browser globals"],
 ];
 
+// Renderer files (scene.ts / Component.tsx / module.ts) legitimately touch the DOM and
+// Pixi, so the engine's purity bans don't apply — but generated code still must not open
+// network connections or evaluate strings. (module.ts is templated by us; scanning it is
+// harmless.) This closes the gap where only engine.ts was security-scanned.
+const BANNED_RENDER = [
+  [/\beval\s*\(/, "eval()"],
+  [/\bnew\s+Function\b/, "new Function"],
+  [/\brequire\s*\(/, "require()"],
+  [/\bimport\s*\(/, "dynamic import()"],
+  [/\bfetch\s*\(/, "fetch()"],
+  [/\bXMLHttpRequest\b/, "XMLHttpRequest"],
+  [/\bWebSocket\b/, "WebSocket"],
+  [/\bprocess\s*\./, "process.*"],
+  [/\bsendBeacon\b/, "navigator.sendBeacon"],
+];
+
 // Pure, fast, no I/O. Throws on the first violation.
 export function lintArchetypeFiles(files) {
   const engine = files["engine.ts"];
@@ -101,6 +117,15 @@ export function lintArchetypeFiles(files) {
     for (const imp of importsOf(src)) {
       if (imp.startsWith("..") && imp !== "../../types") {
         throw new Error(`lint: ${name} imports "${imp}" — archetypes are islands; only "../../types" is shared (HARD RULE #2).`);
+      }
+    }
+    // engine.ts got the stricter purity scan above; scan the renderer files for the
+    // network/eval subset they must also never use.
+    if (name !== "engine.ts") {
+      for (const [re, label] of BANNED_RENDER) {
+        if (re.test(src)) {
+          throw new Error(`lint: ${name} uses ${label} — generated archetype code may not make network or eval calls.`);
+        }
       }
     }
   }
