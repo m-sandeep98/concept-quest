@@ -46,7 +46,7 @@ where a character acts out the concept. (Honest caveat: nesting is one of the *r
   → overflow). `failureModes` maps a signal → gap → remediation. This is the correctness-critical field.
 - **Self-heal loop (wired for real).** A crossed gap threshold routes to an existing `sidequest:<id>`
   (instant) or emits a `generate:<spec>` **ticket** to the local authoring server (`server/`). On a
-  kanban board (Backlog → Authoring → Done) you hit "Author with Claude Code" — or flip **Auto-author**
+  author queue (Backlog → Authoring → Done) you hit "Author with Claude Code" — or flip **Auto-author**
   to drain the backlog one ticket at a time — which invokes `claude -p` headlessly to author a new sidequest node
   (structure + a theme entry per subject); the server **validates** it (solvable level, acyclic deps,
   every step labelled) and writes it into `content/<shape>/`. The app re-reads the graph and the new
@@ -82,7 +82,7 @@ delimited events (buffer + split on `\n` so events never straddle chunk boundari
 over **Server-Sent Events**: token deltas as `text`, pipeline narration (classify → validate → write)
 as `log`, and a terminal `done`/`failed`. The browser's `EventSource` renders the stream and
 **auto-reloads the affected domain on `done`** — using the completion event, not a file-watcher, so it
-never reads half-written content. The UI is a left sidebar of topic tabs + a bottom dock (Kanban board +
+never reads half-written content. The UI is a left sidebar of topic tabs + a bottom dock (Author Queue +
 terminal), mirroring Vibe-Kanban's board+stream split.
 
 **Policy:** authoring runs on the developer's own local Claude account — a supported headless use of
@@ -134,6 +134,6 @@ its prerequisite visibly breaks) was the real test of the contract. The result:
 
 - Rule/step order rules are light (recursion checks the base case first regardless of block order); fine for v1.
 - Two archetypes so far — enough to prove the contract generalizes across *shapes*, not just themes.
-- The self-heal loop runs on a kanban board (Backlog → Authoring → Done) with an Auto-author toggle;
+- The self-heal loop runs on an author queue (Backlog → Authoring → Done) with an Auto-author toggle;
   it's dev-only (needs `npm run server`) and authors one ticket at a time to avoid content-file races.
   `heal-recursive-case` in the recursion content was authored live by `claude -p` through this loop.

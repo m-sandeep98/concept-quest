@@ -5,7 +5,7 @@ import { getModule } from "./archetypes/registry";
 import QuestMap from "./shell/Map";
 import GameHost from "./shell/GameHost";
 import TicketModal from "./shell/TicketModal";
-import Kanban from "./shell/Kanban";
+import AuthorQueue from "./shell/AuthorQueue";
 import NewTopicModal from "./shell/NewTopicModal";
 import Sidebar from "./shell/Sidebar";
 import AgentDock from "./shell/AgentDock";
@@ -35,7 +35,7 @@ export default function App() {
   const [newTopicOpen, setNewTopicOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [dockTab, setDockTab] = useState<"kanban" | "terminal">("kanban");
+  const [dockTab, setDockTab] = useState<"author" | "terminal">("author");
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const authoring = useAuthoring();
 
@@ -242,9 +242,9 @@ export default function App() {
         collapsed={dockCollapsed}
         setCollapsed={setDockCollapsed}
         running={authoring.running}
-        kanban={
+        authorQueue={
           ready ? (
-            <Kanban domain={domainSlug} shape={graph!.shape} onAuthor={authorTicketStreaming} />
+            <AuthorQueue domain={domainSlug} shape={graph!.shape} onAuthor={authorTicketStreaming} />
           ) : (
             <div className="app-msg">…</div>
           )

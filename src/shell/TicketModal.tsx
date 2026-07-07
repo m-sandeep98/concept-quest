@@ -28,7 +28,7 @@ from node:  ${ticket.source}
 reason:     ${reason}`}
         </pre>
         <p className="modal-note">
-          In production this queues as a kanban ticket. Claude Code authors a new node
+          In production this queues in the Author Queue. Claude Code authors a new node
           (structure + theme skins), drops the file into <code>content/{shape}/</code>, and it
           appears in the graph. <strong>No LLM runs in the play loop</strong> — the engine just
           reads the new data.

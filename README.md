@@ -26,8 +26,8 @@ npm run dev      # play-time app  → http://localhost:5173
 npm run server   # 2nd terminal   → authoring server on :8787 (enables authoring: new topics + self-heal)
 ```
 
-Topics live in the **left sidebar** (＋ New Topic to author one). The **bottom dock** has a **Kanban**
-board and a live **Claude Terminal** that streams `claude -p` as it authors; the game **auto-reloads**
+Topics live in the **left sidebar** (＋ New Topic to author one). The **bottom dock** has an **Author
+Queue** and a live **Claude Terminal** that streams `claude -p` as it authors; the game **auto-reloads**
 when a run finishes. The game plays fully without the server — only authoring needs it. Build check:
 `npm run build`.
 
@@ -64,7 +64,7 @@ src/
     progress.ts                # mastery, gap detection, tickets, localStorage
     Map.tsx                    # the ladder + theme switcher
     GameHost.tsx               # validates level data, mounts the archetype
-    Kanban.tsx / tickets.ts    # the LIVE self-heal kanban (auto-author) + authoring-server client
+    AuthorQueue.tsx / tickets.ts # the LIVE self-heal author queue (auto-author) + authoring-server client
     TicketModal.tsx            # explains a ticket the moment a gap is flagged
 server/                        # the OFFLINE half of the loop (no LLM in the play loop)
   server.mjs                   # ticket queue + /api/tickets/:id/author endpoint

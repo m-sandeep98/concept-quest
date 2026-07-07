@@ -347,13 +347,13 @@ code, .mono { font-family: var(--font-mono); color: var(--accent); }
 .term-cursor { color: var(--accent); animation: pulse 1s steps(2) infinite; }
 
 /* =====================================================================
-   Self-heal kanban → mission queue
+   Self-heal author queue → mission queue
    ===================================================================== */
-.kanban { display: flex; flex-direction: column; gap: 12px; }
-.kanban.offline { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; color: var(--muted); font-size: 13px; line-height: 1.6; }
-.kanban-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.kanban-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.03em; color: var(--muted); }
-.kanban-tools { display: flex; gap: 8px; align-items: center; }
+.author-queue { display: flex; flex-direction: column; gap: 12px; }
+.author-queue.offline { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.author-queue-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.author-queue-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.03em; color: var(--muted); }
+.author-queue-tools { display: flex; gap: 8px; align-items: center; }
 .auto-toggle {
   display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px;
   color: var(--muted); background: var(--panel); border: 1px solid var(--line); padding: 6px 10px;
@@ -363,7 +363,7 @@ code, .mono { font-family: var(--font-mono); color: var(--accent); }
 .auto-toggle input { accent-color: var(--accent); }
 .ktool { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; cursor: pointer; font-family: var(--font-mono); font-size: 11px; transition: 0.16s; }
 .ktool:hover { border-color: var(--line-2); color: var(--text); }
-.kanban-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.author-queue-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .kcol { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 11px; min-height: 84px; }
 .kcol.authoring { border-color: rgba(143, 130, 255, 0.35); }
 .kcol.done { border-color: rgba(53, 240, 182, 0.28); }
@@ -501,7 +501,7 @@ code, .mono { font-family: var(--font-mono); color: var(--accent); }
   .topic-tab { flex: 1; min-width: 140px; }
   .topic-tab.new { margin-top: 0; }
 }
-@media (max-width: 720px) { .kanban-cols { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .author-queue-cols { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .rd-stage { grid-template-columns: 1fr; } }
 
 /* Below this width the DAG can't breathe — fall back to a stacked list with a

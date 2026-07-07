@@ -1,6 +1,6 @@
 ---
 name: test-ui
-description: Drive Concept Quest's UI end-to-end in a real browser with Playwright — verify the map, topic sidebar, playing a level, gaps→kanban, the agent dock, theme switching, and (optionally) live topic authoring. Use before committing UI changes, or when asked to verify/screenshot the app.
+description: Drive Concept Quest's UI end-to-end in a real browser with Playwright — verify the map, topic sidebar, playing a level, gaps→author queue, the agent dock, theme switching, and (optionally) live topic authoring. Use before committing UI changes, or when asked to verify/screenshot the app.
 ---
 
 # Test the Concept Quest UI (Playwright)
@@ -32,7 +32,7 @@ Kill both servers when finished.
    - header **"Concept Quest"** + the **🔒 uses your local Claude account** note,
    - **Topics** sidebar with tabs (🌀 Recursion, 📋 Sequence…, and any authored topics) plus **＋ New Topic**,
    - the level **map** with the boss card on top and an active (unlocked) starting level,
-   - the bottom **dock** with **🎫 Kanban** and **🖥️ Claude Terminal** tabs.
+   - the bottom **dock** with **🎫 Author Queue** and **🖥️ Claude Terminal** tabs.
 3. `browser_console_messages` — assert there are **no error-level messages**. A red error means something is broken; investigate before continuing.
 4. `browser_take_screenshot` (fullPage) → attach for visual review.
 
@@ -42,7 +42,7 @@ Kill both servers when finished.
 - Click the topic tab, then an active level card.
 - The tray shows scrambled step cards. Click them into a valid dependency order, then click the run button ("Serve it 🍰" / "Ship it 🚀" / etc.).
 - Assert the win text shows and **Continue** returns to the map with the node badged **✓ mastered**.
-- Gap path: on the boss, deliberately place a step before its prerequisite and run **twice** → confirm a ticket appears in the Kanban **Backlog**.
+- Gap path: on the boss, deliberately place a step before its prerequisite and run **twice** → confirm a ticket appears in the Author Queue **Backlog**.
 
 **Recursion topic** (Wizard's Well / Nesting Dolls):
 - Open the **base case** level, click the STOP block into slot ①, run → assert the win + the well reaching the core.
@@ -50,7 +50,7 @@ Kill both servers when finished.
 
 ## 4. The agent dock
 
-- **🎫 Kanban** tab → columns Backlog / Authoring / Done; a seeded/real ticket has an **⚙ Author with Claude Code** button.
+- **🎫 Author Queue** tab → columns Backlog / Authoring / Done; a seeded/real ticket has an **⚙ Author with Claude Code** button.
 - **🖥️ Claude Terminal** tab → idle message when nothing is running.
 
 ## 5. Live authoring (SLOW — only when explicitly verifying authoring)
@@ -62,7 +62,7 @@ Kill both servers when finished.
 
 ## 6. Theme + responsive
 - On a two-theme topic, click a theme button in the map toolbar → labels/vocab change, structure stays. Screenshot both.
-- `browser_resize` to ~700×900 → sidebar stacks above the map, kanban columns collapse to one; screenshot.
+- `browser_resize` to ~700×900 → sidebar stacks above the map, author-queue columns collapse to one; screenshot.
 
 ## Notes
 - Use `browser_snapshot` to find elements (accessibility tree with refs); click via refs.

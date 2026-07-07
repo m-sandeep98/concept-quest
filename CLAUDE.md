@@ -28,7 +28,7 @@ src/
   App.tsx                     product shell wiring (nav, domain state) — the ONLY file that
                               touches the registry
   types.ts                    THE contract: GameModule / GameProps / Graph / Theme. The hub.
-  shell/                      game-agnostic UI + logic (Map, GameHost, Kanban, Terminal,
+  shell/                      game-agnostic UI + logic (Map, GameHost, AuthorQueue, Terminal,
                               contentLoader, progress, tickets, authoring). Knows NO specific game.
   archetypes/
     registry.ts               shape -> GameModule. The single wiring point.

@@ -7,7 +7,7 @@ const SEED: Record<string, { gap: string; spec: string; source: string }> = {
   "binary-search": { gap: "halve the range", spec: "narrow-drill", source: "demo" },
 };
 
-export default function Kanban({
+export default function AuthorQueue({
   domain,
   shape,
   onAuthor,
@@ -90,8 +90,8 @@ export default function Kanban({
 
   if (!online) {
     return (
-      <div className="kanban offline">
-        🎫 Authoring server offline — run <code>npm run server</code> in a second terminal to enable the self-heal kanban and new topics.
+      <div className="author-queue offline">
+        🎫 Authoring server offline — run <code>npm run server</code> in a second terminal to enable the self-heal author queue and new topics.
       </div>
     );
   }
@@ -103,10 +103,10 @@ export default function Kanban({
   ];
 
   return (
-    <div className="kanban">
-      <div className="kanban-head">
-        <span className="kanban-title">Claude Code authors content from your gaps — watch it in the Claude Terminal tab</span>
-        <div className="kanban-tools">
+    <div className="author-queue">
+      <div className="author-queue-head">
+        <span className="author-queue-title">Claude Code authors content from your gaps — watch it in the Claude Terminal tab</span>
+        <div className="author-queue-tools">
           <label className={`auto-toggle ${auto ? "on" : ""}`}>
             <input type="checkbox" checked={auto} onChange={toggleAuto} /> Auto-author
           </label>
@@ -121,7 +121,7 @@ export default function Kanban({
         </div>
       </div>
 
-      <div className="kanban-cols">
+      <div className="author-queue-cols">
         {cols.map((c) => (
           <div key={c.key} className={`kcol ${c.key}`}>
             <div className="kcol-head">

@@ -6,23 +6,23 @@ export default function AgentDock({
   collapsed,
   setCollapsed,
   running,
-  kanban,
+  authorQueue,
   terminal,
 }: {
-  tab: "kanban" | "terminal";
-  setTab: (t: "kanban" | "terminal") => void;
+  tab: "author" | "terminal";
+  setTab: (t: "author" | "terminal") => void;
   collapsed: boolean;
   setCollapsed: Dispatch<SetStateAction<boolean>>;
   running: boolean;
-  kanban: ReactNode;
+  authorQueue: ReactNode;
   terminal: ReactNode;
 }) {
   return (
     <div className={`dock ${collapsed ? "collapsed" : ""}`}>
       <div className="dock-head">
         <div className="dock-tabs">
-          <button className={`dock-tab ${tab === "kanban" ? "on" : ""}`} onClick={() => setTab("kanban")}>
-            🎫 Kanban
+          <button className={`dock-tab ${tab === "author" ? "on" : ""}`} onClick={() => setTab("author")}>
+            🎫 Author Queue
           </button>
           <button className={`dock-tab ${tab === "terminal" ? "on" : ""}`} onClick={() => setTab("terminal")}>
             🖥️ Claude Terminal {running && <span className="run-dot" />}
@@ -32,7 +32,7 @@ export default function AgentDock({
           {collapsed ? "▲ expand" : "▼ collapse"}
         </button>
       </div>
-      {!collapsed && <div className="dock-body">{tab === "kanban" ? kanban : terminal}</div>}
+      {!collapsed && <div className="dock-body">{tab === "author" ? authorQueue : terminal}</div>}
     </div>
   );
 }
