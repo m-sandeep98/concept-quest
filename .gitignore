@@ -18,3 +18,4 @@ server/queue/
 
 # graphify: derived code graph (regenerate deterministically with `npm run graph`)
 graphify-out/
+.cline/
