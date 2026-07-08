@@ -15,8 +15,12 @@ subjects, and two mechanics share one shell. That's the whole bet: **archetype =
 theme = its *subject*.**
 
 **And you can author your own.** Hit **＋ New Topic**, type any concept, and Claude Code picks the archetype
-whose shape fits and authors a whole validated game from scratch. The bundled `🏛️ How a Bill Becomes a Law`
+whose shape fits and authors a whole validated game from scratch — **sizing the curriculum to the concept**
+(it decides how many levels the idea needs, not a fixed count). The bundled `🏛️ How a Bill Becomes a Law`
 domain was authored this way, live, from the bare phrase.
+
+Each authored game also suggests a few **Deeper dives** — related subtopics you can turn into their own
+sub-game with one click (**✨ Generate sub-game**), nested under the parent topic in the sidebar.
 
 ## Run it
 

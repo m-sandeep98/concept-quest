@@ -119,9 +119,10 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const concept = String(body.concept || "").trim();
       if (!concept) return send(res, 400, { error: "concept required" });
+      const lineage = { parent: body.parent || undefined, fromConcept: body.fromConcept || undefined };
       try {
         const topic = await authorTopic(concept, ROOT);
-        const slug = await applyTopic(concept, topic, ROOT);
+        const slug = await applyTopic(concept, topic, ROOT, lineage);
         console.log(`[topic] authored "${concept}" -> ${slug} (${topic.shape})`);
         return send(res, 200, { slug, label: topic.label, shape: topic.shape });
       } catch (e) {
@@ -137,6 +138,11 @@ const server = http.createServer(async (req, res) => {
         sse.send("failed", { error: "concept required" });
         return sse.end();
       }
+      // Optional lineage: a sub-game authored FROM a parent topic's subtopic.
+      const lineage = {
+        parent: url.searchParams.get("parent") || undefined,
+        fromConcept: url.searchParams.get("fromConcept") || undefined,
+      };
       (async () => {
         try {
           const topic = await authorTopic(concept, ROOT, {
@@ -144,7 +150,7 @@ const server = http.createServer(async (req, res) => {
             onText: (text) => sse.send("text", { text }),
           });
           sse.send("log", { text: "▸ Writing content files…" });
-          const slug = await applyTopic(concept, topic, ROOT);
+          const slug = await applyTopic(concept, topic, ROOT, lineage);
           sse.send("log", { text: `✓ Wrote content/${slug}/ and updated domains.json` });
           sse.send("done", { slug, label: topic.label, shape: topic.shape });
         } catch (e) {

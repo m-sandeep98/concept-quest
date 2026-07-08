@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Gamify any concept into levels. A fixed engine + content-as-data, with a library of themeable game archetypes.",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "vite --config vite.config.ts",
+    "build": "tsc -b && vite build --config vite.config.ts",
     "preview": "vite preview",
     "server": "node server/server.mjs",
     "graph": "graphify update ."

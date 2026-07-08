@@ -159,6 +159,9 @@ code, .mono { font-family: var(--font-mono); color: var(--accent); }
 .sidebar-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
 .topic-tabs { display: flex; flex-direction: column; gap: 7px; }
+.topic-group { display: flex; flex-direction: column; gap: 7px; }
+.topic-tab.sub { margin-left: 12px; font-size: 13px; opacity: 0.92; }
+.topic-branch { color: var(--violet); margin-right: 5px; font-family: var(--font-mono); }
 .topic-tab {
   position: relative; text-align: left; background: var(--glass); color: var(--muted);
   border: 1px solid var(--line); border-radius: var(--r); padding: 11px 13px 11px 16px;
@@ -221,6 +224,29 @@ code, .mono { font-family: var(--font-mono); color: var(--accent); }
   border-radius: var(--r); padding: 13px 16px; color: var(--text); font-size: 14.5px; line-height: 1.5;
 }
 .mission-brief b { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--violet); display: block; margin-bottom: 4px; }
+
+/* deeper dives — optional subtopics the player can spin into their own sub-game */
+.deeper { border-top: 1px dashed var(--line); padding-top: 14px; }
+.deeper-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.deeper-kicker { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--violet); }
+.deeper-note { font-size: 11.5px; color: var(--faint); }
+.deeper-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.sub-card {
+  display: flex; flex-direction: column; gap: 7px; align-items: flex-start;
+  background: var(--glass); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 13px;
+}
+.sub-card.made { border-color: rgba(53, 240, 182, 0.32); }
+.sub-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.sub-blurb { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.sub-btn {
+  margin-top: 2px; cursor: pointer; font-family: var(--font-display); font-size: 12.5px; font-weight: 500;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-2); transition: 0.16s;
+}
+.sub-btn.gen { background: var(--violet-soft); color: #cdc4ff; border-color: rgba(143, 130, 255, 0.4); }
+.sub-btn.gen:hover:not(:disabled) { box-shadow: var(--glow-violet); }
+.sub-btn.play { background: var(--accent-soft); color: var(--text); border-color: rgba(53, 224, 255, 0.4); }
+.sub-btn.play:hover { box-shadow: var(--glow-cyan); }
+.sub-btn:disabled { opacity: 0.55; cursor: progress; }
 
 /* the graph canvas */
 .mission-map {

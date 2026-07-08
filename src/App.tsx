@@ -134,17 +134,27 @@ export default function App() {
   }
 
   // Author a whole new topic through the streaming terminal, then switch to it.
-  async function submitNewTopic(concept: string) {
+  // `opts` carries sub-game lineage when authoring from a parent topic's subtopic.
+  async function submitNewTopic(concept: string, opts?: { parent?: string; fromConcept?: string }) {
     setNewTopicOpen(false);
     setDockTab("terminal");
     setDockCollapsed(false);
     try {
-      const r = (await authoring.startTopic(concept)) as { slug?: string };
+      const r = (await authoring.startTopic(concept, opts)) as { slug?: string };
       if (r?.slug) await afterNewTopic(r.slug);
     } catch {
       /* error is shown in the terminal */
     }
   }
+
+  // A subtopic on the current topic's map → its own sub-game (a new linked domain).
+  function generateSubtopic(concept: string) {
+    void submitNewTopic(concept, { parent: domainSlug, fromConcept: concept });
+  }
+  // Sub-games already authored from THIS topic, keyed by the subtopic that spawned them.
+  const subGamesByConcept = new Map(
+    domains.filter((d) => d.parent === domainSlug && d.fromConcept).map((d) => [d.fromConcept as string, d])
+  );
 
   const agent =
     authoring.status === "running"
@@ -220,6 +230,10 @@ export default function App() {
               onOpen={(id) => setView({ mode: "play", nodeId: id })}
               onSwitchTheme={switchTheme}
               onReset={resetProgress}
+              subGames={subGamesByConcept}
+              onPlaySubGame={setDomainSlug}
+              onGenerateSubGame={generateSubtopic}
+              authoringBusy={authoring.running}
             />
           ) : (
             <GameHost

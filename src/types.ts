@@ -33,11 +33,23 @@ export interface GraphNode {
   failureModes: FailureMode[];
 }
 
+/** A deeper-dive concept the learner can spin off into its OWN separate game. */
+export interface Subtopic {
+  /** Short display title for the deeper-dive. */
+  title: string;
+  /** The concept a sub-game teaches — fed straight back into topic authoring. */
+  concept: string;
+  /** One-line pitch for why it's worth exploring. */
+  blurb?: string;
+}
+
 export interface Graph {
   shape: string;
   themes: string[];
   spine: string[];
   nodes: GraphNode[];
+  /** Optional adjacent concepts the player can author into their own sub-game. */
+  subtopics?: Subtopic[];
 }
 
 // ============================================================================
