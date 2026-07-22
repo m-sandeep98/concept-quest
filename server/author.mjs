@@ -420,16 +420,40 @@ function buildTopicPrompt(concept, examples, manifests, lastErr, chosenShape) {
     `Author a COMPLETE, concise playable learning game for the concept: "${concept}".`,
     ...shapeChoice,
     ``,
-    `Make a SMALL curriculum: 4-5 nodes — one intro level (prereqs []), 1-2 middle levels, ONE boss (highest tier),`,
-    `and ONE sidequest (type "sidequest", prereqs []) that reinforces the main idea — each teaching ONE idea, with`,
-    `TRUE prerequisites (later depends on earlier). ONE theme naming everything for this concept. Keep all text short.`,
+    `SIZE THE CURRICULUM TO THE CONCEPT — YOU decide how many levels it genuinely needs:`,
+    `a simple/atomic concept → 3 levels; a moderate one → 4-5; a rich, multi-part concept → up to 7.`,
+    `One idea per level — don't pad a thin concept, don't cram a deep one. ALWAYS include: one intro`,
+    `level (prereqs []), the middle levels you chose, ONE boss (highest tier), and ONE sidequest`,
+    `(type "sidequest", prereqs []) reinforcing the main idea. TRUE prerequisites (later depends on`,
+    `earlier). ONE theme naming everything for this concept. Keep all text short.`,
+    ``,
+    `Also propose 2-4 SUBTOPICS: adjacent or deeper concepts a curious learner could explore next as`,
+    `their OWN separate game (NOT levels in this one). Each {"title","concept","blurb"} — "concept" is`,
+    `a self-contained phrase that could itself be authored into a full game.`,
     ``,
     `Return ONLY JSON, no markdown, no prose:`,
-    `{"shape":"${sh}","label":"<emoji + short title>","graph":{"shape":"${sh}","themes":["<themeId>"],"spine":[<level ids>],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
+    `{"shape":"${sh}","label":"<emoji + short title>","graph":{"shape":"${sh}","themes":["<themeId>"],"spine":[<level ids>],"subtopics":[{"title":"...","concept":"...","blurb":"..."}],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
     `Node = {id,type:("level"|"boss"|"sidequest"),concept,tier:int,prereqs:[ids],shape,level,failureModes:[]}. Leave failureModes [] (added automatically). Prereqs acyclic; theme covers EVERY node id.`,
     ...formats,
     fix,
   ].join("\n");
+}
+
+// Subtopics are optional metadata (a menu of possible sub-games), NOT gameplay —
+// a malformed one must never fail an otherwise-valid topic. So we sanitize rather
+// than validate: drop anything without both a title and a concept, cap the list.
+function sanitizeSubtopics(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const s of list) {
+    if (!s || typeof s !== "object") continue;
+    const title = typeof s.title === "string" ? s.title.trim() : "";
+    const concept = typeof s.concept === "string" ? s.concept.trim() : "";
+    if (!title || !concept) continue;
+    const blurb = typeof s.blurb === "string" ? s.blurb.trim() : "";
+    out.push(blurb ? { title, concept, blurb } : { title, concept });
+  }
+  return out.slice(0, 6);
 }
 
 function normalizeTopic(concept, parsed) {
@@ -439,12 +463,16 @@ function normalizeTopic(concept, parsed) {
   graph.shape = shape;
   if (!Array.isArray(graph.themes) || !graph.themes.length) graph.themes = Object.keys(themes);
   for (const n of graph.nodes ?? []) n.shape = shape;
+  graph.subtopics = sanitizeSubtopics(graph.subtopics);
   return { shape, graph, themes, label: parsed.label || `🎓 ${titleCase(concept)}` };
 }
 
 function validateGraph(shape, graph, themes, manifests) {
   if (!manifests?.[shape]) throw new Error(`unknown shape "${shape}" (no registered archetype manifest)`);
+  // Claude sizes the curriculum to the concept; keep a floor (a real game) and a
+  // ceiling (guard against a runaway graph that would be unplayable / time out).
   if (!Array.isArray(graph.nodes) || graph.nodes.length < 3) throw new Error("need >= 3 nodes");
+  if (graph.nodes.length > 14) throw new Error(`too many nodes (${graph.nodes.length}); cap is 14`);
   const ids = new Set(graph.nodes.map((n) => n.id));
   if (ids.size !== graph.nodes.length) throw new Error("duplicate node ids");
   let hasBoss = false;
@@ -596,7 +624,10 @@ async function nextDomainSlug(root, concept) {
   return s;
 }
 
-export async function applyTopic(concept, topic, root) {
+// `meta` optionally records sub-game lineage: { parent, fromConcept } links this
+// domain back to the subtopic (on parent's map) that spawned it, so the parent can
+// show ▶ Play instead of ✨ Generate and the sidebar can nest it under its parent.
+export async function applyTopic(concept, topic, root, meta = {}) {
   const s = await nextDomainSlug(root, concept);
   const dir = contentDir(root, s);
   await mkdir(path.join(dir, "themes"), { recursive: true });
@@ -606,7 +637,10 @@ export async function applyTopic(concept, topic, root) {
     theme.id = tid;
     await writeFile(path.join(dir, "themes", `${tid}.json`), JSON.stringify(theme, null, 2) + "\n");
   }
-  await updateDomains(root, { slug: s, label: topic.label });
+  const entry = { slug: s, label: topic.label };
+  if (meta.parent) entry.parent = meta.parent;
+  if (meta.fromConcept) entry.fromConcept = meta.fromConcept;
+  await updateDomains(root, entry);
   return s;
 }
 
@@ -724,7 +758,7 @@ function pGraph(concept, ex, shape, engineTs, manifest, lastErr) {
     engineTs,
     `=== EXAMPLE graph.json (batch-packing) ===`,
     ex.graph,
-    `RULES: {"shape":"${shape}","themes":["<themeId>"],"spine":[<level ids>],"nodes":[...]}. 4-5 nodes: one intro level (prereqs []), 1-2 middle levels, ONE boss (type "boss", highest tier), ONE sidequest (type "sidequest", prereqs []). node = {id,type,concept,tier,prereqs,shape:"${shape}",level,failureModes:[]} (leave failureModes []). EVERY node.level MUST satisfy the engine's validate() AND be solvable. (Signal tags are: ${tags}.)`,
+    `RULES: {"shape":"${shape}","themes":["<themeId>"],"spine":[<level ids>],"subtopics":[{"title":"...","concept":"...","blurb":"..."}],"nodes":[...]}. SIZE IT TO THE CONCEPT — you decide the level count: 3 for a simple idea, up to ~6 for a rich one, one idea per level. ALWAYS: one intro level (prereqs []), the middle levels, ONE boss (type "boss", highest tier), ONE sidequest (type "sidequest", prereqs []). Also add 2-4 subtopics (adjacent concepts for future separate games). node = {id,type,concept,tier,prereqs,shape:"${shape}",level,failureModes:[]} (leave failureModes []). EVERY node.level MUST satisfy the engine's validate() AND be solvable. (Signal tags are: ${tags}.)`,
     `Output ONLY the raw graph JSON — no prose, no fences.`,
     fixNote(lastErr),
   ].join("\n");
@@ -847,6 +881,7 @@ export async function generateArchetype(concept, root, { onLog, attempts = 2, hi
       graph.shape = shape;
       graph.themes = [themeId];
       for (const n of graph.nodes ?? []) n.shape = shape;
+      graph.subtopics = sanitizeSubtopics(graph.subtopics);
       const withNew = { ...(await loadManifests(root)), [shape]: manifest };
       attachFailureModes(shape, graph, withNew);
       validateGraph(shape, graph, themes, withNew);

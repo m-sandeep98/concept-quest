@@ -18,8 +18,12 @@ mechanics share one shell. That's the whole bet: **archetype = a concept's *shap
 **And you can author your own.** Hit **＋ New Topic**, type any concept, and Claude Code picks the archetype
 whose shape fits — or, when no existing shape fits, **generates a brand-new archetype** (its pure engine +
 PixiJS renderer + manifest, gated by lint · build · self-test) — then authors a whole validated game from
-scratch. The bundled `🎛️ How a Finite State Machine Works` domain was authored this way, live, from the bare
+scratch, **sizing the curriculum to the concept** (it decides how many levels the idea needs, not a fixed
+count). The bundled `🎛️ How a Finite State Machine Works` domain was authored this way, live, from the bare
 phrase.
+
+Each authored game also suggests a few **Deeper dives** — related subtopics you can turn into their own
+sub-game with one click (**✨ Generate sub-game**), nested under the parent topic in the sidebar.
 
 ## Run it
 
@@ -84,3 +88,7 @@ schema/graph.schema.json       # what Claude Code authors against
 ```
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the design decisions and how to add archetype #2.
+
+## License
+
+Released under the [MIT License](./LICENSE) — © 2026 Sandeep Mishra.
