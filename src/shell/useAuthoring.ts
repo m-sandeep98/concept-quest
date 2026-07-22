@@ -67,7 +67,12 @@ export function useAuthoring() {
     status,
     error,
     running: status === "running",
-    startTopic: (concept: string) => run(`/api/topics/stream?concept=${encodeURIComponent(concept)}`),
+    startTopic: (concept: string, opts?: { parent?: string; fromConcept?: string }) => {
+      const q = new URLSearchParams({ concept });
+      if (opts?.parent) q.set("parent", opts.parent);
+      if (opts?.fromConcept) q.set("fromConcept", opts.fromConcept);
+      return run(`/api/topics/stream?${q.toString()}`);
+    },
     startHeal: (id: string) => run(`/api/tickets/${encodeURIComponent(id)}/author/stream`),
   };
 }

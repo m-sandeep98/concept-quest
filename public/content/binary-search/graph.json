@@ -2,6 +2,18 @@
   "shape": "binary-search",
   "themes": ["vault-heist", "library"],
   "spine": ["first-cut", "halving", "trust-clues", "boss-vault"],
+  "subtopics": [
+    {
+      "title": "Search on the answer",
+      "concept": "binary search on a monotonic answer space",
+      "blurb": "When you can't index a list — search over possible answers instead."
+    },
+    {
+      "title": "Lower & upper bounds",
+      "concept": "finding the first and last match with binary search",
+      "blurb": "Landing on the boundary of a run of equal values, not just any match."
+    }
+  ],
   "nodes": [
     {
       "id": "first-cut",

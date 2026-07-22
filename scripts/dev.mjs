@@ -28,7 +28,9 @@ const viteBin = path.join(root, "node_modules", ".bin", "vite");
 console.log(`▸ authoring server → :${serverPort}  ·  Vite app → free port (see its printed URL)\n`);
 
 const server = spawn(process.execPath, [path.join(root, "server", "server.mjs")], { cwd: root, env, stdio: "inherit" });
-const vite = spawn(viteBin, [], { cwd: root, env, stdio: "inherit" });
+// `--config vite.config.ts` forces the TS source (the compiled vite.config.js is a symlink
+// into the base checkout, which git worktrees share).
+const vite = spawn(viteBin, ["--config", "vite.config.ts"], { cwd: root, env, stdio: "inherit" });
 
 let shuttingDown = false;
 function shutdown(code) {

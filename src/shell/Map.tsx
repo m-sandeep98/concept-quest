@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { Graph, GraphNode, Theme } from "../types";
+import type { DomainEntry } from "./contentLoader";
 import type { Progress } from "./progress";
 
 type Status = "mastered" | "active" | "locked" | "hidden";
@@ -20,6 +21,11 @@ interface Props {
   onOpen: (nodeId: string) => void;
   onSwitchTheme: (themeId: string) => void;
   onReset: () => void;
+  /** Sub-games already authored from this topic, keyed by the subtopic's concept. */
+  subGames: Map<string, DomainEntry>;
+  onPlaySubGame: (slug: string) => void;
+  onGenerateSubGame: (concept: string) => void;
+  authoringBusy: boolean;
 }
 
 // A cubic S-curve between two points in the 0–100 percent coordinate space.
@@ -28,7 +34,19 @@ function edgePath(x1: number, y1: number, x2: number, y2: number) {
   return `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
 }
 
-export default function QuestMap({ graph, theme, themes, progress, onOpen, onSwitchTheme, onReset }: Props) {
+export default function QuestMap({
+  graph,
+  theme,
+  themes,
+  progress,
+  onOpen,
+  onSwitchTheme,
+  onReset,
+  subGames,
+  onPlaySubGame,
+  onGenerateSubGame,
+  authoringBusy,
+}: Props) {
   const visible = graph.nodes.filter((n) => statusOf(n, progress) !== "hidden");
   // Highest tier (the boss) sits at the top; the entry level anchors the bottom.
   const tiers = [...new Set(visible.map((n) => n.tier))].sort((a, b) => b - a);
@@ -118,6 +136,39 @@ export default function QuestMap({ graph, theme, themes, progress, onOpen, onSwi
           );
         })}
       </div>
+
+      {graph.subtopics && graph.subtopics.length > 0 && (
+        <div className="deeper">
+          <div className="deeper-head">
+            <span className="deeper-kicker">Deeper dives</span>
+            <span className="deeper-note">optional — spin any into its own game</span>
+          </div>
+          <div className="deeper-grid">
+            {graph.subtopics.map((s) => {
+              const made = subGames.get(s.concept);
+              return (
+                <div key={s.concept} className={`sub-card ${made ? "made" : ""}`}>
+                  <span className="sub-title">{s.title}</span>
+                  {s.blurb && <span className="sub-blurb">{s.blurb}</span>}
+                  {made ? (
+                    <button className="sub-btn play" onClick={() => onPlaySubGame(made.slug)}>
+                      ▶ Play sub-game
+                    </button>
+                  ) : (
+                    <button
+                      className="sub-btn gen"
+                      disabled={authoringBusy}
+                      onClick={() => onGenerateSubGame(s.concept)}
+                    >
+                      {authoringBusy ? "authoring…" : "✨ Generate sub-game"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

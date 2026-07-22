@@ -76,7 +76,10 @@ export function validateThemeEntry(shape, e, _level) {
 
 export async function validateGraph(root, shape, graph, themes, manifests) {
   if (!manifests?.[shape]) throw new Error(`unknown shape "${shape}" (no registered archetype manifest)`);
+  // Claude sizes the curriculum to the concept; keep a floor (a real game) and a
+  // ceiling (guard against a runaway graph that would be unplayable / time out).
   if (!Array.isArray(graph.nodes) || graph.nodes.length < 3) throw new Error("need >= 3 nodes");
+  if (graph.nodes.length > 14) throw new Error(`too many nodes (${graph.nodes.length}); cap is 14`);
   const ids = new Set(graph.nodes.map((n) => n.id));
   if (ids.size !== graph.nodes.length) throw new Error("duplicate node ids");
   let hasBoss = false;
@@ -143,6 +146,23 @@ export function attachFailureModes(shape, graph, manifests) {
   }
 }
 
+// Subtopics are optional metadata (a menu of possible sub-games), NOT gameplay —
+// a malformed one must never fail an otherwise-valid topic. So we sanitize rather
+// than validate: drop anything without both a title and a concept, cap the list.
+export function sanitizeSubtopics(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const s of list) {
+    if (!s || typeof s !== "object") continue;
+    const title = typeof s.title === "string" ? s.title.trim() : "";
+    const concept = typeof s.concept === "string" ? s.concept.trim() : "";
+    if (!title || !concept) continue;
+    const blurb = typeof s.blurb === "string" ? s.blurb.trim() : "";
+    out.push(blurb ? { title, concept, blurb } : { title, concept });
+  }
+  return out.slice(0, 6);
+}
+
 export function normalizeTopic(concept, parsed) {
   const shape = parsed.shape;
   const graph = parsed.graph ?? {};
@@ -150,5 +170,6 @@ export function normalizeTopic(concept, parsed) {
   graph.shape = shape;
   if (!Array.isArray(graph.themes) || !graph.themes.length) graph.themes = Object.keys(themes);
   for (const n of graph.nodes ?? []) n.shape = shape;
+  graph.subtopics = sanitizeSubtopics(graph.subtopics);
   return { shape, graph, themes, label: parsed.label || `🎓 ${titleCase(concept)}` };
 }

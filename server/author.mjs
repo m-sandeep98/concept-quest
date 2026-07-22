@@ -40,6 +40,7 @@ import {
   validateThemeEntry,
   attachFailureModes,
   normalizeTopic,
+  sanitizeSubtopics,
 } from "./validate.mjs";
 
 // Preserve author.mjs's historical export surface for helpers that now live elsewhere.
@@ -154,9 +155,11 @@ export async function authorTopic(concept, root, { attempts = 2, onLog, onText }
   // concept's natural interaction fits none of them. Classification failure (e.g. the CLI
   // is unavailable) falls back to the existing multi-shape author.
   let routing = { fits: shapes[0] };
+  let classified = false;
   if (process.env.CQ_NO_CLAUDE !== "1") {
     try {
       routing = await classifyConcept(concept, manifests, { onLog });
+      classified = true;
     } catch (e) {
       onLog?.(`(archetype routing skipped: ${String(e && e.message ? e.message : e).slice(0, 100)})`);
     }
@@ -165,20 +168,25 @@ export async function authorTopic(concept, root, { attempts = 2, onLog, onText }
     onLog?.(`▸ No existing archetype fits "${concept}" — generating a NEW archetype${routing.newShape ? ` (${routing.newShape})` : ""}.`);
     return await generateArchetype(concept, root, { onLog, onText, hint: routing });
   }
+  // The classifier already picked the shape — pin it so the authoring call sends only that
+  // shape's worked example. When classification was skipped/failed we don't trust the default
+  // (shapes[0]), so leave `chosen` null and let the authoring call choose among all shapes.
+  const chosen = classified ? routing.fits : null;
   onLog?.(`▸ "${concept}" fits the "${routing.fits}" archetype — authoring content for it.`);
 
+  const needed = chosen ? [chosen] : shapes;
   let examples;
   try {
     examples = {};
-    for (const s of shapes) examples[s] = await loadExample(root, s, manifests);
+    for (const s of needed) examples[s] = await loadExample(root, s, manifests);
   } catch {
-    throw new Error(`missing reference content for a registered archetype (${shapes.join(", ")})`);
+    throw new Error(`missing reference content for a registered archetype (${needed.join(", ")})`);
   }
   let lastErr = "";
   for (let i = 0; i < attempts; i += 1) {
     try {
-      onLog?.(`▸ Asking Claude Code to classify "${concept}" and author a full game… (attempt ${i + 1})`);
-      const text = await runClaudeStream(buildTopicPrompt(concept, examples, manifests, lastErr), { onLog, onText }, 300000);
+      onLog?.(`▸ Asking Claude Code to author a full game${chosen ? ` (${chosen})` : ""}… (attempt ${i + 1})`);
+      const text = await runClaudeStream(buildTopicPrompt(concept, examples, manifests, lastErr, chosen), { onLog, onText }, 300000);
       onLog?.("▸ Parsing and validating the authored graph…");
       const topic = normalizeTopic(concept, parseJson(text));
       attachFailureModes(topic.shape, topic.graph, manifests);
@@ -194,7 +202,10 @@ export async function authorTopic(concept, root, { attempts = 2, onLog, onText }
   throw new Error(`could not author a valid game for "${concept}" (${lastErr})`);
 }
 
-export async function applyTopic(concept, topic, root) {
+// `meta` optionally records sub-game lineage: { parent, fromConcept } links this
+// domain back to the subtopic (on parent's map) that spawned it, so the parent can
+// show ▶ Play instead of ✨ Generate and the sidebar can nest it under its parent.
+export async function applyTopic(concept, topic, root, meta = {}) {
   const s = await nextDomainSlug(root, concept);
   const dir = contentDir(root, s);
   await mkdir(path.join(dir, "themes"), { recursive: true });
@@ -204,7 +215,10 @@ export async function applyTopic(concept, topic, root) {
     theme.id = tid;
     await writeFile(path.join(dir, "themes", `${tid}.json`), JSON.stringify(theme, null, 2) + "\n");
   }
-  await updateDomains(root, { slug: s, label: topic.label });
+  const entry = { slug: s, label: topic.label };
+  if (meta.parent) entry.parent = meta.parent;
+  if (meta.fromConcept) entry.fromConcept = meta.fromConcept;
+  await updateDomains(root, entry);
   return s;
 }
 
@@ -292,6 +306,7 @@ export async function generateArchetype(concept, root, { onLog, attempts = 2, hi
       graph.shape = shape;
       graph.themes = [themeId];
       for (const n of graph.nodes ?? []) n.shape = shape;
+      graph.subtopics = sanitizeSubtopics(graph.subtopics);
       const withNew = { ...(await loadManifests(root)), [shape]: manifest };
       attachFailureModes(shape, graph, withNew);
       await validateGraph(root, shape, graph, themes, withNew);

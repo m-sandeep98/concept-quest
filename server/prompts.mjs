@@ -32,29 +32,56 @@ export function buildPrompt(ticket, refs, manifests) {
   ].join("\n");
 }
 
-export function buildTopicPrompt(concept, examples, manifests, lastErr) {
+// When the concept has already been classified to a shape (the usual path — `authorTopic`
+// runs `classifyConcept` first), `chosenShape` pins it: the prompt sends ONLY that shape's
+// worked example and drops the "pick a shape" framing. Re-listing every archetype here just
+// re-does the classifier's work and pads input by ~5-6k tokens. When classification was
+// skipped/failed, `chosenShape` is null and we fall back to offering all shapes so the
+// authoring call can choose.
+export function buildTopicPrompt(concept, examples, manifests, lastErr, chosenShape) {
   const fix = lastErr
     ? `\nPREVIOUS ATTEMPT FAILED VALIDATION: ${lastErr}\nFix exactly that and return corrected JSON.\n`
     : "";
   const shapes = Object.keys(manifests);
-  const options = shapes.map((s) => `- "${s}": ${manifests[s].classify}`);
-  const formats = shapes.flatMap((s) => [
+  const pinned = chosenShape && shapes.includes(chosenShape) ? chosenShape : null;
+  const useShapes = pinned ? [pinned] : shapes;
+  const sh = pinned ?? "<shape>";
+
+  const shapeChoice = pinned
+    ? [
+        `Every archetype renders on a 2D stage where a character acts out the idea.`,
+        `Use the "${pinned}" shape (already chosen as the best fit): ${manifests[pinned].classify}`,
+      ]
+    : [
+        `Every archetype renders on a 2D stage where a character acts out the idea. Pick the SHAPE that fits best:`,
+        ...shapes.map((s) => `- "${s}": ${manifests[s].classify}`),
+      ];
+
+  const formats = useShapes.flatMap((s) => [
     ``,
-    `If you choose "${s}": ${manifests[s].levelFormat} COPY THIS WORKING EXAMPLE's structure:`,
+    pinned
+      ? `${manifests[s].levelFormat} COPY THIS WORKING EXAMPLE's structure:`
+      : `If you choose "${s}": ${manifests[s].levelFormat} COPY THIS WORKING EXAMPLE's structure:`,
     JSON.stringify(examples[s].graph),
     JSON.stringify(examples[s].theme),
   ]);
   return [
     `Author a COMPLETE, concise playable learning game for the concept: "${concept}".`,
-    `Every archetype renders on a 2D stage where a character acts out the idea. Pick the SHAPE that fits best:`,
-    ...options,
+    ...shapeChoice,
     ``,
-    `Make a SMALL curriculum: 4-5 nodes — one intro level (prereqs []), 1-2 middle levels, ONE boss (highest tier),`,
-    `and ONE sidequest (type "sidequest", prereqs []) that reinforces the main idea — each teaching ONE idea, with`,
-    `TRUE prerequisites (later depends on earlier). ONE theme naming everything for this concept. Keep all text short.`,
+    `SIZE THE CURRICULUM TO THE CONCEPT — YOU decide how many levels it genuinely needs:`,
+    `a simple/atomic concept → 3 levels; a moderate one → 4-5; a rich, multi-part concept → up to 7.`,
+    `One idea per level — don't pad a thin concept, don't cram a deep one. ALWAYS include: one intro`,
+    `level (prereqs []), the middle levels you chose, ONE boss (highest tier), and ONE sidequest`,
+    `(type "sidequest", prereqs []) reinforcing the main idea. TRUE prerequisites (later depends on`,
+    `earlier). ONE theme naming everything for this concept. Keep all text short.`,
+    ``,
+    `Also propose 2-4 SUBTOPICS: adjacent or deeper concepts a curious learner could explore next as`,
+    `their OWN separate game (NOT levels in this one). Each {"title","concept","blurb"} — "concept" is`,
+    `a self-contained phrase that could itself be authored into a full game.`,
     ``,
     `Return ONLY JSON, no markdown, no prose:`,
-    `{"shape":"<shape>","label":"<emoji + short title>","graph":{"shape":"<shape>","themes":["<themeId>"],"spine":[<level ids>],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
+    `{"shape":"${sh}","label":"<emoji + short title>","graph":{"shape":"${sh}","themes":["<themeId>"],"spine":[<level ids>],"subtopics":[{"title":"...","concept":"...","blurb":"..."}],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
     `Node = {id,type:("level"|"boss"|"sidequest"),concept,tier:int,prereqs:[ids],shape,level,failureModes:[]}. Leave failureModes [] (added automatically). Prereqs acyclic; theme covers EVERY node id.`,
     ...formats,
     fix,
@@ -117,7 +144,7 @@ export function pGraph(concept, ex, shape, engineTs, manifest, lastErr) {
     engineTs,
     `=== EXAMPLE graph.json (batch-packing) ===`,
     ex.graph,
-    `RULES: {"shape":"${shape}","themes":["<themeId>"],"spine":[<level ids>],"nodes":[...]}. 4-5 nodes: one intro level (prereqs []), 1-2 middle levels, ONE boss (type "boss", highest tier), ONE sidequest (type "sidequest", prereqs []). node = {id,type,concept,tier,prereqs,shape:"${shape}",level,failureModes:[]} (leave failureModes []). EVERY node.level MUST satisfy the engine's validate() AND be solvable. (Signal tags are: ${tags}.)`,
+    `RULES: {"shape":"${shape}","themes":["<themeId>"],"spine":[<level ids>],"subtopics":[{"title":"...","concept":"...","blurb":"..."}],"nodes":[...]}. SIZE IT TO THE CONCEPT — you decide the level count: 3 for a simple idea, up to ~6 for a rich one, one idea per level. ALWAYS: one intro level (prereqs []), the middle levels, ONE boss (type "boss", highest tier), ONE sidequest (type "sidequest", prereqs []). Also add 2-4 subtopics (adjacent concepts for future separate games). node = {id,type,concept,tier,prereqs,shape:"${shape}",level,failureModes:[]} (leave failureModes []). EVERY node.level MUST satisfy the engine's validate() AND be solvable. (Signal tags are: ${tags}.)`,
     `Output ONLY the raw graph JSON — no prose, no fences.`,
     fixNote(lastErr),
   ].join("\n");

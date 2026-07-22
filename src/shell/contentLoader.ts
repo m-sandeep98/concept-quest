@@ -60,6 +60,10 @@ export async function loadDomain(slug: string): Promise<{ graph: Graph; themes: 
 export interface DomainEntry {
   slug: string;
   label: string;
+  /** If this domain is a sub-game, the slug of the topic it was spun off from. */
+  parent?: string;
+  /** The subtopic concept (on the parent's map) that spawned this sub-game. */
+  fromConcept?: string;
 }
 
 // The list of playable domains (folders under content/). New topics append here.
