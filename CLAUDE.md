@@ -21,8 +21,9 @@ from play states.
 ## Commands
 
 ```bash
-npm run dev            # play-time app        → http://localhost:5173  (Vite)
-npm run server         # authoring server     → :8787  (needed only for New Topic + self-heal)
+npm run dev            # play-time app        (Vite; auto-picks a free port, prints its URL)
+npm run server         # authoring server     (prefers :8787, scans up if busy; only for New Topic + self-heal)
+npm run dev:all        # BOTH on free ports, proxy auto-wired (one command; recommended)
 npm run build          # tsc -b && vite build (the CI-style correctness check)
 npm run graph          # build/refresh the code graph (graphify; deterministic, idempotent, no LLM)
 ```
@@ -44,8 +45,9 @@ src/
     batchPacking/             same layout — resource/throughput batching (the "why vLLM" shape)
     stateTraversal/           same layout — state + transition (FSM); GENERATED live by claude -p (Stage 2)
 public/content/<domain>/      authored data: graph.json + themes/*.json  (NOT code — file drops)
-server/                       offline `claude -p` authoring (author.mjs) + gate (archetypeGate.mjs)
-                              + SSE server (server.mjs)
+server/                       offline `claude -p` authoring, split by seam: orchestrators (author.mjs)
+                              over claude.mjs (CLI) · prompts.mjs · content.mjs (IO) · validate.mjs ·
+                              util.mjs; the Stage-2 gate (archetypeGate.mjs); SSE server (server.mjs)
 schema/graph.schema.json      JSON Schema for authored graphs
 ```
 
