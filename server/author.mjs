@@ -6,7 +6,7 @@
 import { readFile, writeFile, mkdir, readdir, rm } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { lintArchetypeFiles, buildProject, engineSelfTest } from "./archetypeGate.mjs";
+import { lintArchetypeFiles, buildProject, engineSelfTest, validateLevelsWithEngine } from "./archetypeGate.mjs";
 
 const contentDir = (root, shape) => path.join(root, "public", "content", shape);
 const archetypesDir = (root) => path.join(root, "src", "archetypes");
@@ -54,6 +54,16 @@ function uniqueId(base, graph) {
   let i = 2;
   while (ids.has(`${base}-${i}`)) i += 1;
   return `${base}-${i}`;
+}
+
+// The reference node a drill mirrors: the exact-concept node if present, else any
+// sidequest, else the first node. Shared by the prompt builder, finalizer, and template.
+function pickExampleNode(graph, gap) {
+  return (
+    graph.nodes.find((n) => n.concept === gap) ||
+    graph.nodes.find((n) => n.type === "sidequest") ||
+    graph.nodes[0]
+  );
 }
 
 // ---------- the real Claude Code invocation ----------
@@ -184,10 +194,7 @@ export function runClaudeStream(prompt, { onText, onLog } = {}, timeoutMs = 3000
 
 function buildPrompt(ticket, refs, manifests) {
   const { graph, themes } = refs;
-  const example =
-    graph.nodes.find((n) => n.concept === ticket.gap) ||
-    graph.nodes.find((n) => n.type === "sidequest") ||
-    graph.nodes[0];
+  const example = pickExampleNode(graph, ticket.gap);
   const exampleThemes = {};
   for (const id of graph.themes) exampleThemes[id] = themes[id].nodes[example.id];
 
@@ -237,28 +244,37 @@ function topoOrThrow(steps) {
   if (seen !== steps.length) throw new Error("dependency cycle in steps");
 }
 
-function validateLevel(shape, level) {
-  if (shape === "character-descent") {
-    if (!level || typeof level.startDepth !== "number") throw new Error("level.startDepth must be a number");
-    const V = ["stop", "descend", "descendSame"];
-    const pre = Array.isArray(level.preplaced) ? level.preplaced : [];
-    const pal = Array.isArray(level.palette) ? level.palette : [];
-    for (const b of [...pre, ...pal]) if (!V.includes(b)) throw new Error(`invalid block "${b}"`);
-    const all = new Set([...pre, ...pal]);
-    if (!all.has("stop") || !all.has("descend")) throw new Error("not solvable: needs stop + descend obtainable");
-  } else if (shape === "binary-search") {
-    const vals = level && level.values;
-    if (!Array.isArray(vals) || vals.length < 2 || !vals.every((n) => typeof n === "number"))
-      throw new Error("level.values must be an array of >= 2 numbers");
-    for (let i = 1; i < vals.length; i += 1)
-      if (vals[i] <= vals[i - 1]) throw new Error("level.values must be strictly ascending");
-    if (typeof level.targetIndex !== "number" || level.targetIndex < 0 || level.targetIndex >= vals.length)
-      throw new Error("level.targetIndex out of range");
-  } else {
-    // A registered archetype without a builtin structural guard here (e.g. a Stage-2
-    // generated shape). Correctness is enforced by the archetype's own module.validate()
-    // and its engine self-test; the server only insists the level is present.
-    if (!level || typeof level !== "object") throw new Error(`shape "${shape}": level must be an object`);
+// Validate authored levels for a shape against the ARCHETYPE'S OWN validate() (exported from
+// its engine.ts) — the exact guard the browser runs at the GameModule boundary. Replaces a
+// hard-coded per-shape switch: every archetype self-describes its level contract, so adding
+// one needs no edits here (HARD RULE — only App touches the registry; the server reads
+// manifests/engines). A shape whose engine exposes no validate() falls back to a presence
+// check. `items`: [{ label, level }]; the label names the offending node in any error.
+async function validateLevelsForShape(root, shape, items) {
+  const engineTs = path.join(archetypesDir(root), camel(shape), "engine.ts");
+  let src = "";
+  try {
+    src = await readFile(engineTs, "utf8");
+  } catch {
+    /* no engine on disk for this shape */
+  }
+  const exportsValidate =
+    /export\s+(?:async\s+)?function\s+validate\b/.test(src) || /export\s*\{[^}]*\bvalidate\b[^}]*\}/.test(src);
+  if (!exportsValidate) {
+    for (const { label, level } of items) {
+      if (!level || typeof level !== "object") throw new Error(`${label}: shape "${shape}" level must be an object`);
+    }
+    return;
+  }
+  try {
+    await validateLevelsWithEngine(root, engineTs, items.map((it) => it.level));
+  } catch (e) {
+    const m = /^(\d+)\t([\s\S]*)$/.exec(String(e && e.message ? e.message : e));
+    if (m) {
+      const item = items[Number(m[1])];
+      throw new Error(`${item ? item.label : `level ${m[1]}`}: ${m[2]}`);
+    }
+    throw e;
   }
 }
 
@@ -271,14 +287,11 @@ function validateThemeEntry(shape, e, _level) {
   // An archetype that needs `extra` validates it in its own module.validate() boundary.
 }
 
-function finalize(ticket, partial, refs) {
+async function finalize(root, ticket, partial, refs) {
   const { graph } = refs;
-  const example =
-    graph.nodes.find((n) => n.concept === ticket.gap) ||
-    graph.nodes.find((n) => n.type === "sidequest") ||
-    graph.nodes[0];
+  const example = pickExampleNode(graph, ticket.gap);
   const level = partial.node && partial.node.level;
-  validateLevel(graph.shape, level);
+  await validateLevelsForShape(root, graph.shape, [{ label: "authored level", level }]);
 
   const themes = {};
   for (const tid of graph.themes) {
@@ -309,12 +322,9 @@ function normalizeParsed(p) {
   return { node: { level: node.level ?? p.level }, themes: p.themes ?? {} };
 }
 
-function templateAuthor(ticket, refs) {
+async function templateAuthor(root, ticket, refs) {
   const { graph, themes } = refs;
-  const src =
-    graph.nodes.find((n) => n.concept === ticket.gap) ||
-    graph.nodes.find((n) => n.type === "sidequest") ||
-    graph.nodes[0];
+  const src = pickExampleNode(graph, ticket.gap);
   const partial = { node: { level: clone(src.level) }, themes: {} };
   for (const tid of graph.themes) {
     const base = clone(themes[tid].nodes[src.id]);
@@ -326,7 +336,7 @@ function templateAuthor(ticket, refs) {
       ...(base.extra ? { extra: base.extra } : {}),
     };
   }
-  return finalize(ticket, partial, refs);
+  return finalize(root, ticket, partial, refs);
 }
 
 export async function authorNode(ticket, root, { onLog, onText } = {}) {
@@ -336,7 +346,7 @@ export async function authorNode(ticket, root, { onLog, onText } = {}) {
     try {
       onLog?.(`▸ Asking Claude Code to author a "${ticket.gap}" drill for the ${refs.graph.shape} archetype…`);
       const raw = await runClaudeStream(buildPrompt(ticket, refs, manifests), { onLog, onText }, 120000);
-      const authored = finalize(ticket, normalizeParsed(parseJson(raw)), refs);
+      const authored = await finalize(root, ticket, normalizeParsed(parseJson(raw)), refs);
       onLog?.("✓ Drill validated.");
       return { authored, authoredBy: "claude" };
     } catch (e) {
@@ -345,7 +355,7 @@ export async function authorNode(ticket, root, { onLog, onText } = {}) {
     }
   }
   onLog?.("▸ Authoring from the deterministic template…");
-  return { authored: templateAuthor(ticket, refs), authoredBy: "template" };
+  return { authored: await templateAuthor(root, ticket, refs), authoredBy: "template" };
 }
 
 export async function applyAuthored(shape, authored, root) {
@@ -422,7 +432,7 @@ function normalizeTopic(concept, parsed) {
   return { shape, graph, themes, label: parsed.label || `🎓 ${titleCase(concept)}` };
 }
 
-function validateGraph(shape, graph, themes, manifests) {
+async function validateGraph(root, shape, graph, themes, manifests) {
   if (!manifests?.[shape]) throw new Error(`unknown shape "${shape}" (no registered archetype manifest)`);
   if (!Array.isArray(graph.nodes) || graph.nodes.length < 3) throw new Error("need >= 3 nodes");
   const ids = new Set(graph.nodes.map((n) => n.id));
@@ -436,7 +446,6 @@ function validateGraph(shape, graph, themes, manifests) {
     const prereqs = n.prereqs ?? [];
     for (const p of prereqs) if (!ids.has(p)) throw new Error(`node ${n.id} prereq "${p}" missing`);
     if (prereqs.length === 0 && n.type !== "sidequest") hasRoot = true;
-    validateLevel(shape, n.level);
     for (const fm of n.failureModes ?? []) {
       if (!fm.signal || !fm.gap || !fm.remediation) throw new Error(`node ${n.id} bad failureMode`);
       const [kind, target] = String(fm.remediation).split(":");
@@ -459,6 +468,9 @@ function validateGraph(shape, graph, themes, manifests) {
     }
     for (const n of graph.nodes) validateThemeEntry(shape, t.nodes?.[n.id], n.level);
   }
+  // Every node's level must satisfy the archetype's own validate() (run out-of-process).
+  // Batched into one subprocess for the whole graph after the cheap structural checks pass.
+  await validateLevelsForShape(root, shape, graph.nodes.map((n) => ({ label: `node ${n.id}`, level: n.level })));
 }
 
 // Each archetype emits a FIXED set of play-state signals, declared in its manifest
@@ -526,7 +538,7 @@ export async function authorTopic(concept, root, { attempts = 2, onLog, onText }
       onLog?.("▸ Parsing and validating the authored graph…");
       const topic = normalizeTopic(concept, parseJson(text));
       attachFailureModes(topic.shape, topic.graph, manifests);
-      validateGraph(topic.shape, topic.graph, topic.themes, manifests);
+      await validateGraph(root, topic.shape, topic.graph, topic.themes, manifests);
       onLog?.(`✓ Valid: "${topic.shape}" archetype · ${topic.graph.nodes.length} nodes · acyclic · boss present.`);
       return topic;
     } catch (e) {
@@ -822,7 +834,7 @@ export async function generateArchetype(concept, root, { onLog, attempts = 2, hi
       for (const n of graph.nodes ?? []) n.shape = shape;
       const withNew = { ...(await loadManifests(root)), [shape]: manifest };
       attachFailureModes(shape, graph, withNew);
-      validateGraph(shape, graph, themes, withNew);
+      await validateGraph(root, shape, graph, themes, withNew);
       onLog?.("✓ core validated (engine solvable · content valid). Generating the renderer…");
 
       // 5) scene.ts, 6) Component.tsx, 7) styles.css — the PixiJS renderer

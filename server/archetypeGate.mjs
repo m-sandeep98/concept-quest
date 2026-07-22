@@ -142,23 +142,44 @@ export async function buildProject(root, { timeoutMs = 240000 } = {}) {
   }
 }
 
-// Transpile the engine (strip types) and run its self-test in a time-boxed subprocess.
-export async function engineSelfTest(root, engineTsPath, selfTest, { timeoutMs = 30000 } = {}) {
-  const tmpDir = path.join(root, "node_modules", ".cache", "cq-selftest");
+// Transpile one engine.ts to standalone ESM in an isolated cache dir. esbuild strips the
+// type-only imports (engines carry no runtime deps), so the output runs with no resolution.
+// Shared by the self-test and the level-check below. Throws on a transpile failure.
+async function transpileEngine(root, engineTsPath, cacheName, timeoutMs) {
+  const tmpDir = path.join(root, "node_modules", ".cache", cacheName);
   await mkdir(tmpDir, { recursive: true });
   const engineMjs = path.join(tmpDir, "engine.mjs");
+  const trans = await run(
+    "npx",
+    ["esbuild", engineTsPath, "--format=esm", "--platform=node", `--outfile=${engineMjs}`, "--log-level=error"],
+    { cwd: root, timeoutMs }
+  );
+  if (trans.code !== 0) throw new Error(`engine failed to transpile:\n${trans.err}`);
+  return { tmpDir, engineMjs };
+}
+
+// Transpile the engine (strip types) and run its self-test in a time-boxed subprocess.
+export async function engineSelfTest(root, engineTsPath, selfTest, { timeoutMs = 30000 } = {}) {
+  const { tmpDir, engineMjs } = await transpileEngine(root, engineTsPath, "cq-selftest", timeoutMs);
   const stJson = path.join(tmpDir, "selftest.json");
-
-  const trans = await run("npx", ["esbuild", engineTsPath, "--format=esm", "--platform=node", `--outfile=${engineMjs}`, "--log-level=error"], {
-    cwd: root,
-    timeoutMs,
-  });
-  if (trans.code !== 0) throw new Error(`self-test: engine failed to transpile:\n${trans.err}`);
-
   await writeFile(stJson, JSON.stringify(selfTest));
   const runner = path.join(root, "server", "_selfTestRunner.mjs");
   const res = await run("node", [runner, engineMjs, stJson], { cwd: root, timeoutMs });
   if (res.code !== 0) throw new Error(`self-test failed: ${(res.err || res.out).trim()}`);
+}
+
+// Validate authored levels against an archetype engine's OWN exported validate() — the same
+// guard the browser runs at the GameModule boundary — transpiled and executed in an isolated
+// subprocess (generated engines are untrusted). This is what lets the authoring server drop
+// its hard-coded per-shape switch: every archetype self-describes its level contract.
+// Throws Error("<index>\t<message>") naming the first level that fails; resolves when all pass.
+export async function validateLevelsWithEngine(root, engineTsPath, levels, { timeoutMs = 30000 } = {}) {
+  const { tmpDir, engineMjs } = await transpileEngine(root, engineTsPath, "cq-levelcheck", timeoutMs);
+  const levelsJson = path.join(tmpDir, "levels.json");
+  await writeFile(levelsJson, JSON.stringify(levels));
+  const runner = path.join(root, "server", "_validateRunner.mjs");
+  const res = await run("node", [runner, engineMjs, levelsJson], { cwd: root, timeoutMs });
+  if (res.code !== 0) throw new Error((res.err || res.out).trim() || "level-check failed");
 }
 
 // Orchestrate all three, cheapest first. `files` is the in-memory {name: source} map (for

@@ -1,25 +1,11 @@
 import type { GameModule } from "../../types";
 import CharacterDescent from "./CharacterDescent";
-import type { BlockId, CharacterDescentLevel } from "./engine";
+import { validate } from "./engine";
+import type { CharacterDescentLevel } from "./engine";
 
-const VALID: BlockId[] = ["stop", "descend", "descendSame"];
-const asBlocks = (x: unknown): BlockId[] =>
-  Array.isArray(x) ? x.filter((b): b is BlockId => VALID.includes(b as BlockId)) : [];
-
-// Guards Claude-Code-authored level data at the boundary. Throws on malformed input.
-function validate(level: unknown): CharacterDescentLevel {
-  const l = level as Record<string, unknown> | null;
-  if (!l || typeof l.startDepth !== "number") {
-    throw new Error("character-descent: level.startDepth must be a number");
-  }
-  return {
-    startDepth: l.startDepth,
-    preplaced: asBlocks(l.preplaced),
-    palette: asBlocks(l.palette),
-    requiredBlocks: asBlocks(l.requiredBlocks),
-  };
-}
-
+// Thin wiring: the registry auto-discovers this GameModule via glob; it meets the shell
+// only at the GameModule contract. `validate` (which guards CC-authored data at the
+// boundary) lives in the pure engine.ts so the offline authoring server can reuse it.
 export const characterDescentModule: GameModule<CharacterDescentLevel> = {
   shape: "character-descent",
   label: "Character Descent (2D)",

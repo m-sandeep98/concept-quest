@@ -71,10 +71,14 @@ Before finishing a change, sanity-check rules 1–3 with the graph (below) or:
 ## Recipe: add an archetype (the extension primitive)
 
 1. `src/archetypes/<shape>/` — `Component.tsx` (behind `GameProps`) mounting a **PixiJS stage via
-   `scene.ts`** (the imperative renderer), pure `engine.ts` (emits signals), and `module.ts` exporting a
-   `GameModule { shape, label, component, validate }`. `validate` **guards CC-authored data at the
-   boundary** — throw on malformed input. Keep `engine.ts` free of React/Pixi — the scene only *draws*
-   the engine's output, so the correctness-critical logic stays pure and testable.
+   `scene.ts`** (the imperative renderer), pure `engine.ts` (emits signals **and exports `validate`**),
+   and a thin `module.ts` re-exporting them as a `GameModule { shape, label, component, validate }`.
+   `validate` **guards CC-authored data at the boundary** — throw on malformed input. Keep it in
+   `engine.ts`, not `module.ts`: living in the pure island lets the offline authoring server run the
+   *same* validator (it transpiles `engine.ts` and calls `validate` in a sandboxed subprocess — see
+   `server/archetypeGate.mjs`), so there is **no per-shape validation to hard-code server-side**. Keep
+   `engine.ts` free of React/Pixi — the scene only *draws* the engine's output, so the correctness-critical
+   logic stays pure and testable.
 2. **No registry edit** — `registry.ts` auto-discovers `src/archetypes/*/module.ts` via `import.meta.glob`.
    Instead, drop an `archetype.manifest.json` beside `module.ts` so the offline author can classify concepts
    onto your shape and author valid `level`/theme data (declares `blurb`, `classify`, `levelFormat`,

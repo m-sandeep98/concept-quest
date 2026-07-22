@@ -105,3 +105,33 @@ export function stackAt(trace: TraceEvent[], stepIndex: number): number[] {
   }
   return stack;
 }
+
+const VALID_BLOCKS: BlockId[] = ["stop", "descend", "descendSame"];
+const asBlocks = (x: unknown): BlockId[] =>
+  Array.isArray(x) ? x.filter((b): b is BlockId => VALID_BLOCKS.includes(b as BlockId)) : [];
+
+/**
+ * Guard CC-authored level data at the boundary (used by module.validate). Throws on
+ * malformed input. Lives here in the pure engine — not in module.ts — so the offline
+ * authoring server can transpile and run this same check (no React/Pixi to drag in).
+ */
+export function validate(level: unknown): CharacterDescentLevel {
+  const l = level as Record<string, unknown> | null;
+  if (!l || typeof l.startDepth !== "number") {
+    throw new Error("character-descent: level.startDepth must be a number");
+  }
+  const preplaced = asBlocks(l.preplaced);
+  const palette = asBlocks(l.palette);
+  // Solvable only if both a base case (stop) and a shrinking step (descend) are obtainable
+  // from the locked + palette blocks — otherwise the character can never reach the core.
+  const obtainable = new Set<BlockId>([...preplaced, ...palette]);
+  if (!obtainable.has("stop") || !obtainable.has("descend")) {
+    throw new Error("character-descent: not solvable — needs stop + descend obtainable");
+  }
+  return {
+    startDepth: l.startDepth,
+    preplaced,
+    palette,
+    requiredBlocks: asBlocks(l.requiredBlocks),
+  };
+}
