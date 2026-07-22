@@ -9,6 +9,19 @@
     "shape": { "type": "string", "description": "The archetype that renders every node here, e.g. 'character-descent' or 'binary-search'." },
     "themes": { "type": "array", "items": { "type": "string" }, "description": "Theme file ids under ./themes/. Each is a different SUBJECT over the same structure." },
     "spine": { "type": "array", "items": { "type": "string" }, "description": "The top-down motivational ladder: node ids from first to boss." },
+    "subtopics": {
+      "type": "array",
+      "description": "Optional adjacent/deeper concepts the player can spin into their OWN separate game (not levels here). The shell surfaces these as 'Deeper dives'.",
+      "items": {
+        "type": "object",
+        "required": ["title", "concept"],
+        "properties": {
+          "title": { "type": "string", "description": "Short display title for the deeper-dive." },
+          "concept": { "type": "string", "description": "Self-contained concept phrase, fed back into topic authoring to create the sub-game." },
+          "blurb": { "type": "string", "description": "One-line pitch for why it's worth exploring." }
+        }
+      }
+    },
     "nodes": {
       "type": "array",
       "items": {

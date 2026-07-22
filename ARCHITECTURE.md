@@ -60,10 +60,19 @@ on a 2D **PixiJS** stage where a character acts out the concept. (Honest caveat:
 
 The self-heal loop authors *one node*; the same pipeline, scaled up, authors a *whole domain* from a bare
 concept. `POST /api/topics {concept}` → Claude Code (`claude -p`) classifies the concept's shape, picks a
-registered archetype, and authors a full graph + theme. The server **validates the entire graph** (≥3
+registered archetype, and authors a full graph + theme. **Claude sizes the curriculum to the concept** —
+it decides how many levels the idea genuinely needs (roughly 3 for something atomic, up to ~7 for a rich,
+multi-part concept), rather than a fixed count. The server **validates the entire graph** (3–14
 nodes, one boss, a root with no prereqs, acyclic prereqs, every node valid for its archetype, theme covers
 every node) and **retries with the validation error fed back** if it's wrong — no silent bad content. It
 writes `content/<slug>/` and appends to `content/domains.json`; the app picks up the new playable domain.
+
+**Subtopics → sub-games.** In the same call Claude also proposes a few `graph.subtopics`
+(`{title, concept, blurb}`) — adjacent/deeper ideas, each spinnable into its *own* separate game. The map
+surfaces them as a "Deeper dives" strip: **✨ Generate sub-game** reruns this exact pipeline on that
+subtopic's `concept`, tagging the new domain with `parent`+`fromConcept` (so the parent shows **▶ Play**
+once made, and the sidebar nests it under its parent). Subtopics are sanitized, never validated-to-throw —
+a malformed one can't sink an otherwise-valid topic.
 
 A **domain** (a content folder) is decoupled from its **archetype** (the `shape` that renders it), so a
 `binary-search` topic can be themed as a library-shelf search or a vault heist without being named after the
