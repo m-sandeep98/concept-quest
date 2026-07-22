@@ -4,20 +4,23 @@ Gamify **any** concept into levels. A fixed game engine reads content-as-data; a
 themeable **game archetypes** turns concepts into things you *play*, not quizzes you answer.
 Claude Code is the authoring engine (offline); no LLM runs while you play.
 
-This repo is a **vertical slice** with **two archetypes**, each running two subjects on the exact
-same engine and the same structural graph:
+This repo is a **vertical slice** with **four archetypes**, each rendered on a 2D **PixiJS** stage where a
+character acts out the concept. Most run two subjects on the exact same engine and the same structural graph:
 
 - 🌀 **Recursive Descent** (shape: self-similar nesting) — 🧙 *Wizard's Well* (recursion in code) & 🪆 *Nesting Dolls* (no code)
-- 📋 **Sequence / Process** (shape: ordering + dependencies) — 🚀 *Ship It* (a build pipeline) & 🎂 *Bake a Cake* (a recipe)
+- 🔍 **Binary Search** (shape: search by halving) — 🗝️ *Vault Heist* (code) & 📚 *Sorted Shelf* (books on a shelf)
+- 🧩 **Batch Packing** (shape: resource/throughput batching) — ⚡ *vLLM on a GPU* (inference throughput) & 🥖 *Batch Bakery* (oven throughput)
+- 🎛️ **State Traversal** (shape: state + transition) — *Finite State Machine* — this archetype was **generated live** by Claude Code (see below)
 
-Switch archetypes (top) and subjects (theme buttons) in the app to watch one mechanic teach different
-subjects, and two mechanics share one shell. That's the whole bet: **archetype = a concept's *shape*;
-theme = its *subject*.**
+Switch archetypes and subjects in the app to watch one mechanic teach different subjects, and several
+mechanics share one shell. That's the whole bet: **archetype = a concept's *shape*; theme = its *subject*.**
 
 **And you can author your own.** Hit **＋ New Topic**, type any concept, and Claude Code picks the archetype
-whose shape fits and authors a whole validated game from scratch — **sizing the curriculum to the concept**
-(it decides how many levels the idea needs, not a fixed count). The bundled `🏛️ How a Bill Becomes a Law`
-domain was authored this way, live, from the bare phrase.
+whose shape fits — or, when no existing shape fits, **generates a brand-new archetype** (its pure engine +
+PixiJS renderer + manifest, gated by lint · build · self-test) — then authors a whole validated game from
+scratch, **sizing the curriculum to the concept** (it decides how many levels the idea needs, not a fixed
+count). The bundled `🎛️ How a Finite State Machine Works` domain was authored this way, live, from the bare
+phrase.
 
 Each authored game also suggests a few **Deeper dives** — related subtopics you can turn into their own
 sub-game with one click (**✨ Generate sub-game**), nested under the parent topic in the sidebar.
@@ -60,10 +63,12 @@ repurposed. See Anthropic's [Usage Policy](https://www.anthropic.com/legal/aup) 
 src/
   types.ts                     # the GameModule contract + content-graph types
   archetypes/
-    registry.ts                # shape -> archetype (add a game = add a line)
-    characterDescent/          # archetype #1 (2D/PixiJS): engine.ts + scene.ts + CharacterDescent.tsx + module.ts
-    binarySearch/              # archetype #2 (2D/PixiJS): engine.ts + scene.ts + BinarySearch.tsx + module.ts
-  shell/                       # fixed engine, archetype-agnostic (unchanged across both archetypes)
+    registry.ts                # shape -> archetype; auto-discovers */module.ts (no edit to add one)
+    characterDescent/          # recursion (2D/PixiJS): engine.ts + scene.ts + CharacterDescent.tsx + module.ts + manifest
+    binarySearch/              # binary search — same layout
+    batchPacking/              # resource/throughput batching — same layout
+    stateTraversal/            # generated live by Claude Code — same layout (Component.tsx + styles.css)
+  shell/                       # fixed engine, archetype-agnostic (unchanged across every archetype)
     contentLoader.ts           # reads content-as-data at runtime
     progress.ts                # mastery, gap detection, tickets, localStorage
     Map.tsx                    # the ladder + theme switcher
@@ -71,11 +76,14 @@ src/
     AuthorQueue.tsx / tickets.ts # the LIVE self-heal author queue (auto-author) + authoring-server client
     TicketModal.tsx            # explains a ticket the moment a gap is flagged
 server/                        # the OFFLINE half of the loop (no LLM in the play loop)
-  server.mjs                   # ticket queue + /api/tickets/:id/author endpoint
-  author.mjs                   # invokes `claude -p` to author a node; deterministic fallback; validates all output
+  server.mjs                   # ticket queue + topic/heal authoring endpoints (SSE stream)
+  author.mjs                   # invokes `claude -p` to author a node/topic/archetype; deterministic fallback; validates all output
+  archetypeGate.mjs            # lint · build · self-test gate for generated archetypes
 public/content/
   character-descent/           # graph.json + themes/{wizard-well,matryoshka}.json
   binary-search/               # graph.json + themes/{vault-heist,library}.json
+  batch-packing/               # graph.json + themes/{gpu-vllm,kitchen}.json
+  how-a-finite-state-machine-works/  # graph.json + themes/fsm-basics.json (authored live)
 schema/graph.schema.json       # what Claude Code authors against
 ```
 

@@ -25,16 +25,18 @@ The scalability bet. An archetype is keyed to a concept's **shape**, not its sub
 |---|---|---|
 | self-similar / nesting | **character-descent** (built, 2D) | recursion, fractals, nested stories, taxonomy |
 | search / lookup by halving | **binary-search** (built, 2D) | dictionary lookup, guessing games, divide-and-conquer |
-| sequence / process | sequence arena | build pipelines, recipes, history, an algorithm |
-| cause → effect | chain/graph builder | causation, ecosystems |
-| classify / group | sorting arena | taxonomy, parts of speech |
-| trade-off / resource | balance | economics, ecology |
-| state + transition | board of states | phases of matter, grammar tense |
+| trade-off / resource / throughput | **batch-packing** (built, 2D) | GPU inference batching, oven throughput, scheduling |
+| state + transition | **state-traversal** (built, 2D — generated live) | finite state machines, grammar tense, phases of matter |
+| sequence / process | sequence arena *(planned)* | build pipelines, recipes, history, an algorithm |
+| cause → effect | chain/graph builder *(planned)* | causation, ecosystems |
+| classify / group | sorting arena *(planned)* | taxonomy, parts of speech |
 
-~8–12 archetypes, each re-themeable, cover most of general knowledge. **`character-descent` ships with
-two themes over ONE `graph.json`** to prove it: `wizard-well` (code) and `matryoshka` (no code); likewise
-`binary-search` skins as `vault-heist` and `library`. Every archetype renders on a 2D **PixiJS** stage
-where a character acts out the concept. (Honest caveat: nesting is one of the *rarer* shapes.)
+~8–12 archetypes, each re-themeable, cover most of general knowledge. **Four ship today**, each proving the
+shape/theme split over ONE `graph.json`: `character-descent` skins as `wizard-well` (code) and `matryoshka`
+(no code); `binary-search` as `vault-heist` and `library`; `batch-packing` as `gpu-vllm` and `kitchen`; and
+`state-traversal` ships `fsm-basics` (this archetype was **generated live** — see §7). Every archetype renders
+on a 2D **PixiJS** stage where a character acts out the concept. (Honest caveat: nesting is one of the
+*rarer* shapes.)
 
 ## 4. Fixed engine + content-as-data + deterministic gaps
 
@@ -76,12 +78,14 @@ A **domain** (a content folder) is decoupled from its **archetype** (the `shape`
 `binary-search` topic can be themed as a library-shelf search or a vault heist without being named after the
 archetype. Heal tickets carry both `domain` (where to write) and `shape` (how to author).
 
-Authoring targets the two built 2D archetypes: a concept that fits recursion/nesting becomes a
-`character-descent` game; a lookup/search/divide-and-conquer concept becomes a `binary-search` game.
+Authoring routes the concept to whichever built archetype's shape fits — `character-descent` (recursion/
+nesting), `binary-search` (lookup/search/divide-and-conquer), `batch-packing` (resource/throughput), or
+`state-traversal` (state + transition). When **no** existing shape fits, it falls through to on-the-go
+archetype generation (§7) rather than forcing a bad fit.
 
 Limits: authored topics currently ship with empty `failureModes` (so the self-heal loop doesn't fire on them
-yet); authoring is a ~1-2 min `claude -p` call and only targets the two existing archetypes, so a concept
-that fits neither shape won't author well (which is what motivates archetypes #3+).
+yet), and authoring is a ~1-2 min `claude -p` call (a full archetype generation is longer — seven model calls
+plus the build gate).
 
 ## 6. Live authoring terminal (SSE)
 
@@ -97,6 +101,27 @@ terminal), mirroring Vibe-Kanban's board+stream split.
 **Policy:** authoring runs on the developer's own local Claude account — a supported headless use of
 Claude Code. Productizing to many users requires each user's own account/API key (a single dev account
 may not proxy many end-users). See README.
+
+## 7. On-the-go archetype generation (Stage 2)
+
+The registry auto-discovers `src/archetypes/*/module.ts`, and each archetype self-describes its authoring
+contract in an `archetype.manifest.json`. So when a concept fits **none** of the built shapes, Claude Code
+authors a brand-new archetype from scratch — its pure `engine.ts`, PixiJS `scene.ts` + `Component.tsx`, CSS,
+and manifest — as **seven small single-file model calls** (one whole-archetype call times out locally).
+
+Generated code is trusted only after a **three-stage gate** (`server/archetypeGate.mjs`), cheapest first:
+
+1. **lint** — the files obey the island rules: `engine.ts` imports only `../../types` and is pure (no
+   `eval`/`require`/`fetch`/`process`/DOM/clock/randomness); no file reaches into another archetype or the
+   shell. The renderer files (`scene.ts`/`Component.tsx`) are scanned for the same dangerous calls, minus the
+   DOM/Pixi globals they legitimately use.
+2. **build** — the whole TS project still typechecks **and** bundles with the new files in it.
+3. **self-test** — the pure engine is solvable and emits its declared gap signals, run headlessly in a
+   time-boxed subprocess against the manifest's `selfTest` cases.
+
+Fail any stage and the generated directory is rolled back. Play-time stays LLM-free: a passing archetype is
+ordinary bundled code. The shipped `state-traversal` archetype (the finite-state-machine domain) was
+generated live through exactly this path.
 
 ## The extensibility primitive: the `GameModule` contract
 
@@ -119,30 +144,34 @@ interface GameProps<L> {
 
 1. `src/archetypes/timeline/` — a `Timeline.tsx` component behind `GameProps`, an `engine.ts` (pure,
    deterministic, emits the signals), and a `module.ts` exporting a `GameModule`.
-2. Register one line in `src/archetypes/registry.ts`.
+2. Drop an `archetype.manifest.json` beside `module.ts` — the registry auto-discovers the module via glob
+   (no edit to `registry.ts`), and the offline author reads the manifest to classify concepts onto your shape.
 3. Author `public/content/timeline/graph.json` + theme skins.
 
 The map, progress, gap engine, tickets, and theming are untouched. Each archetype may render however it
 needs (DOM/SVG/Canvas/Phaser) behind the same contract.
 
-### What adding archetype #2 (`sequence`) actually cost
+### What adding archetype #2 (`binary-search`) actually cost
 
-Building a genuinely different second game (order steps into a valid dependency order; a step run before
-its prerequisite visibly breaks) was the real test of the contract. The result:
+Building a genuinely different second game (search a sorted row by halving; guessing linearly or off the
+wrong half visibly fails) was the real test of the contract. The result:
 
 - **Shell logic files unchanged** — `Map`, `GameHost`, `progress`, `contentLoader` didn't move.
 - **One additive contract change** — `ThemeNode.extra` (a per-node bag) so a theme can carry
-  archetype-specific data (here: step labels). Recursion-specific `visual` fields became optional.
+  archetype-specific data. Recursion-specific `visual` fields became optional.
 - **One app-level addition** — a domain picker in `App.tsx` so you can navigate between archetypes.
   That's product navigation, not the archetype contract.
-- Same proof repeated: `sequence` ships **two subjects over one `graph.json`** — *Ship It* (a build
-  pipeline) and *Bake a Cake* (a recipe) share the identical dependency DAG per node. Gap signals
-  (`wrong-start`, `dependency-violation`) come from play states; both engines are unit-tested.
+- Same proof repeated: `binary-search` ships **two subjects over one `graph.json`** — *Vault Heist* (code)
+  and *Sorted Shelf* (books) share the identical structural graph per node, and gap signals come from play
+  states. Archetypes #3–#4 (`batch-packing`, then the live-generated `state-traversal`) pushed the same
+  contract further without touching the shell.
 
 ## Known limits of this slice
 
 - Rule/step order rules are light (recursion checks the base case first regardless of block order); fine for v1.
-- Two archetypes so far — enough to prove the contract generalizes across *shapes*, not just themes.
+- Four archetypes so far (one of them generated live) — enough to prove the contract generalizes across
+  *shapes*, not just themes.
+- The pure engines are written to be unit-testable, but an automated test suite / CI isn't wired up yet.
 - The self-heal loop runs on an author queue (Backlog → Authoring → Done) with an Auto-author toggle;
   it's dev-only (needs `npm run server`) and authors one ticket at a time to avoid content-file races.
   `heal-recursive-case` in the recursion content was authored live by `claude -p` through this loop.

@@ -15,6 +15,27 @@ const PORT = Number(process.env.PORT) || 8787;
 
 await mkdir(QUEUE, { recursive: true });
 
+// This server spawns `claude -p` (spends money) and writes files. It is local-only:
+// restrict browser access to the dev app's own origin so a random page you happen to
+// have open can't drive authoring or delete queue files. Requests with NO Origin header
+// (curl, or the app's own calls via the Vite proxy — which are same-origin) are allowed.
+const ALLOWED_ORIGINS = new Set([
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  `http://localhost:${PORT}`,
+  `http://127.0.0.1:${PORT}`,
+]);
+const originAllowed = (origin) => !origin || ALLOWED_ORIGINS.has(origin);
+
+// Ticket ids and content domains become path segments (queue/<id>.json, content/<domain>/).
+// Reject anything that could escape its directory (`..`, slashes, etc.).
+const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;
+function safeSegment(value, what) {
+  const v = String(value ?? "");
+  if (v === "." || v === ".." || !SAFE_SEGMENT.test(v)) throw new Error(`invalid ${what}`);
+  return v;
+}
+
 async function listTickets() {
   const files = (await readdir(QUEUE)).filter((f) => f.endsWith(".json"));
   const out = [];
@@ -29,32 +50,44 @@ async function listTickets() {
 }
 const save = (t) => writeFile(path.join(QUEUE, `${t.id}.json`), JSON.stringify(t, null, 2));
 async function getTicket(id) {
+  let safe;
   try {
-    return JSON.parse(await readFile(path.join(QUEUE, `${id}.json`), "utf8"));
+    safe = safeSegment(id, "ticket id");
+  } catch {
+    return null; // malformed id -> treat as "no such ticket"
+  }
+  try {
+    return JSON.parse(await readFile(path.join(QUEUE, `${safe}.json`), "utf8"));
   } catch {
     return null;
   }
 }
 
 function send(res, code, body) {
-  res.writeHead(code, {
+  const headers = {
     "content-type": "application/json",
-    "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,DELETE,OPTIONS",
     "access-control-allow-headers": "content-type",
-  });
+    vary: "origin",
+  };
+  // Echo the origin back only when it's allow-listed (never a wildcard on a server
+  // that can spend money / write files). `res.reqOrigin` is set per request below.
+  if (res.reqOrigin && ALLOWED_ORIGINS.has(res.reqOrigin)) headers["access-control-allow-origin"] = res.reqOrigin;
+  res.writeHead(code, headers);
   res.end(JSON.stringify(body));
 }
 
 // Server-Sent Events: stream authoring logs + Claude's live output to the browser.
 function sseInit(res) {
-  res.writeHead(200, {
+  const headers = {
     "content-type": "text/event-stream",
     "cache-control": "no-cache, no-transform",
     connection: "keep-alive",
-    "access-control-allow-origin": "*",
     "x-accel-buffering": "no",
-  });
+    vary: "origin",
+  };
+  if (res.reqOrigin && ALLOWED_ORIGINS.has(res.reqOrigin)) headers["access-control-allow-origin"] = res.reqOrigin;
+  res.writeHead(200, headers);
   res.write(": connected\n\n");
   return {
     send: (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
@@ -78,7 +111,10 @@ function readBody(req) {
 }
 
 const server = http.createServer(async (req, res) => {
+  res.reqOrigin = req.headers.origin;
   if (req.method === "OPTIONS") return send(res, 204, {});
+  // A browser page from another origin cannot drive this local tool.
+  if (!originAllowed(res.reqOrigin)) return send(res, 403, { error: "cross-origin request refused" });
   const url = new URL(req.url, "http://localhost");
   try {
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/api")) {
@@ -94,7 +130,13 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && url.pathname === "/api/tickets") {
       const body = await readBody(req);
       if (!body.shape) return send(res, 400, { error: "shape required" });
-      const domain = body.domain || body.shape;
+      let domain;
+      try {
+        safeSegment(body.shape, "shape");
+        domain = safeSegment(body.domain || body.shape, "domain");
+      } catch (e) {
+        return send(res, 400, { error: String(e.message) });
+      }
       // dedupe: reuse an open ticket for the same gap in the same domain
       const open = (await listTickets()).find(
         (x) => x.domain === domain && x.gap === body.gap && x.spec === (body.spec || "") && x.status !== "done"
@@ -222,8 +264,14 @@ const server = http.createServer(async (req, res) => {
 
     const del = url.pathname.match(/^\/api\/tickets\/([^/]+)$/);
     if (req.method === "DELETE" && del) {
+      let id;
       try {
-        await unlink(path.join(QUEUE, `${decodeURIComponent(del[1])}.json`));
+        id = safeSegment(decodeURIComponent(del[1]), "ticket id");
+      } catch (e) {
+        return send(res, 400, { error: String(e.message) });
+      }
+      try {
+        await unlink(path.join(QUEUE, `${id}.json`));
       } catch {
         /* already gone */
       }

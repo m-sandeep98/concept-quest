@@ -3,6 +3,12 @@
 Read this first. It's the map, the rules, and the recipes. Deep rationale lives in
 [`ARCHITECTURE.md`](./ARCHITECTURE.md); the product pitch lives in [`README.md`](./README.md).
 
+> **Keep the docs in sync.** These three files (`CLAUDE.md`, `ARCHITECTURE.md`, `README.md`) describe the
+> same system. If a change alters the architecture, the archetype/theme inventory, the authoring/self-heal
+> flow, the file layout, or anything else those docs state, **update the affected docs in the same change.**
+> Stale docs — wrong archetype count, a renamed/removed domain, a feature that no longer works that way —
+> are treated as a bug, not a follow-up.
+
 ## What this is (in one breath)
 
 Gamify **any** concept into levels. A **fixed engine reads content-as-data**: an `archetype` (a
@@ -36,8 +42,10 @@ src/
                               + archetype.manifest.json (self-describes the offline authoring contract)
     binarySearch/             same layout: Component.tsx + scene.ts + engine.ts + module.ts + manifest
     batchPacking/             same layout — resource/throughput batching (the "why vLLM" shape)
+    stateTraversal/           same layout — state + transition (FSM); GENERATED live by claude -p (Stage 2)
 public/content/<domain>/      authored data: graph.json + themes/*.json  (NOT code — file drops)
-server/                       offline `claude -p` authoring (author.mjs) + SSE server (server.mjs)
+server/                       offline `claude -p` authoring (author.mjs) + gate (archetypeGate.mjs)
+                              + SSE server (server.mjs)
 schema/graph.schema.json      JSON Schema for authored graphs
 ```
 
