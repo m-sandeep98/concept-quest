@@ -383,22 +383,42 @@ async function loadExample(root, shape, manifests) {
   return { shape, blurb: manifests?.[shape]?.blurb ?? shape, graph, theme };
 }
 
-function buildTopicPrompt(concept, examples, manifests, lastErr) {
+// When the concept has already been classified to a shape (the usual path — `authorTopic`
+// runs `classifyConcept` first), `chosenShape` pins it: the prompt sends ONLY that shape's
+// worked example and drops the "pick a shape" framing. Re-listing every archetype here just
+// re-does the classifier's work and pads input by ~5-6k tokens. When classification was
+// skipped/failed, `chosenShape` is null and we fall back to offering all shapes so the
+// authoring call can choose.
+function buildTopicPrompt(concept, examples, manifests, lastErr, chosenShape) {
   const fix = lastErr
     ? `\nPREVIOUS ATTEMPT FAILED VALIDATION: ${lastErr}\nFix exactly that and return corrected JSON.\n`
     : "";
   const shapes = Object.keys(manifests);
-  const options = shapes.map((s) => `- "${s}": ${manifests[s].classify}`);
-  const formats = shapes.flatMap((s) => [
+  const pinned = chosenShape && shapes.includes(chosenShape) ? chosenShape : null;
+  const useShapes = pinned ? [pinned] : shapes;
+  const sh = pinned ?? "<shape>";
+
+  const shapeChoice = pinned
+    ? [
+        `Every archetype renders on a 2D stage where a character acts out the idea.`,
+        `Use the "${pinned}" shape (already chosen as the best fit): ${manifests[pinned].classify}`,
+      ]
+    : [
+        `Every archetype renders on a 2D stage where a character acts out the idea. Pick the SHAPE that fits best:`,
+        ...shapes.map((s) => `- "${s}": ${manifests[s].classify}`),
+      ];
+
+  const formats = useShapes.flatMap((s) => [
     ``,
-    `If you choose "${s}": ${manifests[s].levelFormat} COPY THIS WORKING EXAMPLE's structure:`,
+    pinned
+      ? `${manifests[s].levelFormat} COPY THIS WORKING EXAMPLE's structure:`
+      : `If you choose "${s}": ${manifests[s].levelFormat} COPY THIS WORKING EXAMPLE's structure:`,
     JSON.stringify(examples[s].graph),
     JSON.stringify(examples[s].theme),
   ]);
   return [
     `Author a COMPLETE, concise playable learning game for the concept: "${concept}".`,
-    `Every archetype renders on a 2D stage where a character acts out the idea. Pick the SHAPE that fits best:`,
-    ...options,
+    ...shapeChoice,
     ``,
     `SIZE THE CURRICULUM TO THE CONCEPT — YOU decide how many levels it genuinely needs:`,
     `a simple/atomic concept → 3 levels; a moderate one → 4-5; a rich, multi-part concept → up to 7.`,
@@ -412,7 +432,7 @@ function buildTopicPrompt(concept, examples, manifests, lastErr) {
     `a self-contained phrase that could itself be authored into a full game.`,
     ``,
     `Return ONLY JSON, no markdown, no prose:`,
-    `{"shape":"<shape>","label":"<emoji + short title>","graph":{"shape":"<shape>","themes":["<themeId>"],"spine":[<level ids>],"subtopics":[{"title":"...","concept":"...","blurb":"..."}],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
+    `{"shape":"${sh}","label":"<emoji + short title>","graph":{"shape":"${sh}","themes":["<themeId>"],"spine":[<level ids>],"subtopics":[{"title":"...","concept":"...","blurb":"..."}],"nodes":[<node>...]},"themes":{"<themeId>":{"id":"<themeId>","label":"...","subject":"...","bossHook":"...","vocab":{...},"visual":{...},"nodes":{"<nodeId>":{...}}}}}`,
     `Node = {id,type:("level"|"boss"|"sidequest"),concept,tier:int,prereqs:[ids],shape,level,failureModes:[]}. Leave failureModes [] (added automatically). Prereqs acyclic; theme covers EVERY node id.`,
     ...formats,
     fix,
@@ -526,9 +546,11 @@ export async function authorTopic(concept, root, { attempts = 2, onLog, onText }
   // concept's natural interaction fits none of them. Classification failure (e.g. the CLI
   // is unavailable) falls back to the existing multi-shape author.
   let routing = { fits: shapes[0] };
+  let classified = false;
   if (process.env.CQ_NO_CLAUDE !== "1") {
     try {
       routing = await classifyConcept(concept, manifests, { onLog });
+      classified = true;
     } catch (e) {
       onLog?.(`(archetype routing skipped: ${String(e && e.message ? e.message : e).slice(0, 100)})`);
     }
@@ -537,20 +559,25 @@ export async function authorTopic(concept, root, { attempts = 2, onLog, onText }
     onLog?.(`▸ No existing archetype fits "${concept}" — generating a NEW archetype${routing.newShape ? ` (${routing.newShape})` : ""}.`);
     return await generateArchetype(concept, root, { onLog, onText, hint: routing });
   }
+  // The classifier already picked the shape — pin it so the authoring call sends only that
+  // shape's worked example. When classification was skipped/failed we don't trust the default
+  // (shapes[0]), so leave `chosen` null and let the authoring call choose among all shapes.
+  const chosen = classified ? routing.fits : null;
   onLog?.(`▸ "${concept}" fits the "${routing.fits}" archetype — authoring content for it.`);
 
+  const needed = chosen ? [chosen] : shapes;
   let examples;
   try {
     examples = {};
-    for (const s of shapes) examples[s] = await loadExample(root, s, manifests);
+    for (const s of needed) examples[s] = await loadExample(root, s, manifests);
   } catch {
-    throw new Error(`missing reference content for a registered archetype (${shapes.join(", ")})`);
+    throw new Error(`missing reference content for a registered archetype (${needed.join(", ")})`);
   }
   let lastErr = "";
   for (let i = 0; i < attempts; i += 1) {
     try {
-      onLog?.(`▸ Asking Claude Code to classify "${concept}" and author a full game… (attempt ${i + 1})`);
-      const text = await runClaudeStream(buildTopicPrompt(concept, examples, manifests, lastErr), { onLog, onText }, 300000);
+      onLog?.(`▸ Asking Claude Code to author a full game${chosen ? ` (${chosen})` : ""}… (attempt ${i + 1})`);
+      const text = await runClaudeStream(buildTopicPrompt(concept, examples, manifests, lastErr, chosen), { onLog, onText }, 300000);
       onLog?.("▸ Parsing and validating the authored graph…");
       const topic = normalizeTopic(concept, parseJson(text));
       attachFailureModes(topic.shape, topic.graph, manifests);
