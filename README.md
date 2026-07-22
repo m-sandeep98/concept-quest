@@ -84,3 +84,7 @@ schema/graph.schema.json       # what Claude Code authors against
 ```
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the design decisions and how to add archetype #2.
+
+## License
+
+Released under the [MIT License](./LICENSE) — © 2026 Sandeep Mishra.
