@@ -29,8 +29,11 @@ sub-game with one click (**✨ Generate sub-game**), nested under the parent top
 
 ```bash
 npm install
-npm run dev      # play-time app  → http://localhost:5173
-npm run server   # 2nd terminal   → authoring server on :8787 (enables authoring: new topics + self-heal)
+npm run dev:all  # start BOTH (app + authoring server) on free ports, proxy auto-wired
+
+# …or run them separately (each grabs a free port; the app prints its URL):
+npm run dev      # play-time app  (Vite; auto-picks a free port)
+npm run server   # 2nd terminal   → authoring server (prefers :8787, scans up if busy) — enables new topics + self-heal
 ```
 
 Topics live in the **left sidebar** (＋ New Topic to author one). The **bottom dock** has an **Author

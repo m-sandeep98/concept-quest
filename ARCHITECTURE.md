@@ -50,8 +50,10 @@ on a 2D **PixiJS** stage where a character acts out the concept. (Honest caveat:
   (instant) or emits a `generate:<spec>` **ticket** to the local authoring server (`server/`). On a
   author queue (Backlog → Authoring → Done) you hit "Author with Claude Code" — or flip **Auto-author**
   to drain the backlog one ticket at a time — which invokes `claude -p` headlessly to author a new sidequest node
-  (structure + a theme entry per subject); the server **validates** it (solvable level, acyclic deps,
-  every step labelled) and writes it into `content/<shape>/`. The app re-reads the graph and the new
+  (structure + a theme entry per subject); the server **validates** it — the level through the archetype's
+  own `validate()` (transpiled from `engine.ts` and run in a sandboxed subprocess, so there is no per-shape
+  check hard-coded server-side), plus acyclic deps and a theme entry per node — and writes it into
+  `content/<shape>/`. The app re-reads the graph and the new
   node appears, surfaced. If the model output is missing/malformed, a deterministic template author
   clones a known-valid node so the loop always closes. The "I don't get this" button is the manual hatch.
   The browser never calls an LLM — authoring is strictly offline.
@@ -63,8 +65,9 @@ concept. `POST /api/topics {concept}` → Claude Code (`claude -p`) classifies t
 registered archetype, and authors a full graph + theme. **Claude sizes the curriculum to the concept** —
 it decides how many levels the idea genuinely needs (roughly 3 for something atomic, up to ~7 for a rich,
 multi-part concept), rather than a fixed count. The server **validates the entire graph** (3–14
-nodes, one boss, a root with no prereqs, acyclic prereqs, every node valid for its archetype, theme covers
-every node) and **retries with the validation error fed back** if it's wrong — no silent bad content. It
+nodes, one boss, a root with no prereqs, acyclic prereqs, every node's level passing the archetype's own
+`validate()`, theme covers every node) and **retries with the validation error fed back** if it's wrong —
+no silent bad content. It
 writes `content/<slug>/` and appends to `content/domains.json`; the app picks up the new playable domain.
 
 **Subtopics → sub-games.** In the same call Claude also proposes a few `graph.subtopics`
@@ -143,7 +146,9 @@ interface GameProps<L> {
 ### To add archetype #2 (e.g. `timeline`)
 
 1. `src/archetypes/timeline/` — a `Timeline.tsx` component behind `GameProps`, an `engine.ts` (pure,
-   deterministic, emits the signals), and a `module.ts` exporting a `GameModule`.
+   deterministic, emits the signals **and exports `validate`**), and a thin `module.ts` re-exporting them
+   as a `GameModule`. Keeping `validate` in the pure `engine.ts` lets the offline authoring server run the
+   *same* boundary check (it transpiles the engine and calls `validate` in a sandboxed subprocess).
 2. Drop an `archetype.manifest.json` beside `module.ts` — the registry auto-discovers the module via glob
    (no edit to `registry.ts`), and the offline author reads the manifest to classify concepts onto your shape.
 3. Author `public/content/timeline/graph.json` + theme skins.

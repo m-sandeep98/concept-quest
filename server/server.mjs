@@ -11,21 +11,21 @@ import { authorNode, applyAuthored, authorTopic, applyTopic } from "./author.mjs
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const QUEUE = path.join(__dirname, "queue");
-const PORT = Number(process.env.PORT) || 8787;
+// Ports are dynamic. Prefer $PORT (else 8787); if it's busy, scan upward for a free one so a
+// second checkout or a stale server never blocks startup. `npm run dev:all` passes a free
+// PORT and points the Vite proxy at it via CQ_SERVER_PORT.
+const PREFERRED_PORT = Number(process.env.PORT) || 8787;
 
 await mkdir(QUEUE, { recursive: true });
 
-// This server spawns `claude -p` (spends money) and writes files. It is local-only:
-// restrict browser access to the dev app's own origin so a random page you happen to
-// have open can't drive authoring or delete queue files. Requests with NO Origin header
-// (curl, or the app's own calls via the Vite proxy — which are same-origin) are allowed.
-const ALLOWED_ORIGINS = new Set([
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  `http://localhost:${PORT}`,
-  `http://127.0.0.1:${PORT}`,
-]);
-const originAllowed = (origin) => !origin || ALLOWED_ORIGINS.has(origin);
+// This server spawns `claude -p` (spends money) and writes files. It is local-only. Since
+// both the dev app (Vite) and this server pick ports dynamically, we allow any localhost /
+// 127.0.0.1 origin rather than a fixed port. Requests with NO Origin header (curl, or the
+// app's own same-origin calls via the Vite proxy) are allowed; a genuinely cross-origin
+// REMOTE page — whose Origin is its own domain, not localhost — is still refused, so a
+// random page you happen to have open can't drive authoring or delete queue files.
+const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const originAllowed = (origin) => !origin || LOCAL_ORIGIN.test(origin);
 
 // Ticket ids and content domains become path segments (queue/<id>.json, content/<domain>/).
 // Reject anything that could escape its directory (`..`, slashes, etc.).
@@ -72,7 +72,7 @@ function send(res, code, body) {
   };
   // Echo the origin back only when it's allow-listed (never a wildcard on a server
   // that can spend money / write files). `res.reqOrigin` is set per request below.
-  if (res.reqOrigin && ALLOWED_ORIGINS.has(res.reqOrigin)) headers["access-control-allow-origin"] = res.reqOrigin;
+  if (res.reqOrigin && originAllowed(res.reqOrigin)) headers["access-control-allow-origin"] = res.reqOrigin;
   res.writeHead(code, headers);
   res.end(JSON.stringify(body));
 }
@@ -86,7 +86,7 @@ function sseInit(res) {
     "x-accel-buffering": "no",
     vary: "origin",
   };
-  if (res.reqOrigin && ALLOWED_ORIGINS.has(res.reqOrigin)) headers["access-control-allow-origin"] = res.reqOrigin;
+  if (res.reqOrigin && originAllowed(res.reqOrigin)) headers["access-control-allow-origin"] = res.reqOrigin;
   res.writeHead(200, headers);
   res.write(": connected\n\n");
   return {
@@ -120,7 +120,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/api")) {
       return send(res, 200, {
         service: "Concept Quest authoring server",
-        note: "This is the API only — open the game at http://localhost:5173",
+        note: "This is the API only — open the game at the Vite dev URL it prints (default http://localhost:5173).",
         endpoints: ["GET /api/health", "GET /api/tickets", "POST /api/tickets", "POST /api/tickets/:id/author", "DELETE /api/tickets/:id"],
       });
     }
@@ -278,22 +278,44 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true });
     }
 
-    send(res, 404, { error: "not found", hint: "This is the API server. Open the game at http://localhost:5173" });
+    send(res, 404, { error: "not found", hint: "This is the API server. Open the game at the Vite dev URL (default http://localhost:5173)." });
   } catch (e) {
     send(res, 500, { error: String(e) });
   }
 });
 
-server.on("error", (e) => {
-  if (e.code === "EADDRINUSE") {
-    console.error(
-      `✗ Port ${PORT} is already in use — another authoring server is probably still running.\n` +
-        `  Stop it:   lsof -ti :${PORT} | xargs kill\n` +
-        `  Or use another port:   PORT=8788 npm run server   (then update the Vite proxy in vite.config.ts to match)`
-    );
-    process.exit(1);
-  }
-  throw e;
-});
+// Bind to the preferred port, scanning upward past any that are already in use.
+function listenOnFreePort(preferred, maxTries = 25) {
+  return new Promise((resolve, reject) => {
+    let port = preferred;
+    let tries = 0;
+    const cleanup = () => {
+      server.off("error", onError);
+      server.off("listening", onListening);
+    };
+    const onError = (e) => {
+      if (e.code === "EADDRINUSE" && tries < maxTries) {
+        tries += 1;
+        port += 1;
+        server.listen(port);
+      } else {
+        cleanup();
+        reject(e);
+      }
+    };
+    const onListening = () => {
+      cleanup();
+      resolve(server.address().port);
+    };
+    server.on("error", onError);
+    server.on("listening", onListening);
+    server.listen(port);
+  });
+}
 
-server.listen(PORT, () => console.log(`🎫 Concept Quest authoring server → http://localhost:${PORT}  (queue: ${QUEUE})`));
+const boundPort = await listenOnFreePort(PREFERRED_PORT);
+console.log(`🎫 Concept Quest authoring server → http://localhost:${boundPort}  (queue: ${QUEUE})`);
+if (boundPort !== PREFERRED_PORT) {
+  console.log(`   (preferred port ${PREFERRED_PORT} was busy — using ${boundPort})`);
+  console.log(`   point a standalone dev server here with:  CQ_SERVER_PORT=${boundPort} npm run dev`);
+}
