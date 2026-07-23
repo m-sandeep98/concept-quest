@@ -52,12 +52,20 @@ export function parseJson(text) {
 // Claude generates, and resolves with the final result text. Drives the live
 // "Claude terminal". Uses --output-format stream-json (newline-delimited JSON).
 export function runClaudeStream(prompt, { onText, onLog } = {}, timeoutMs = 300000) {
+  return streamClaude(
+    ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages"],
+    prompt,
+    { onText, onLog },
+    timeoutMs
+  );
+}
+
+// The shared streaming core: spawn `claude` with the given argv, feed it the prompt on stdin,
+// translate the newline-delimited event stream into onText/onLog callbacks, and resolve with
+// the final result text. Both the authoring runs and the doubt-chat ride this.
+function streamClaude(args, prompt, { onText, onLog } = {}, timeoutMs) {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      "claude",
-      ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages"],
-      { stdio: ["pipe", "pipe", "pipe"] }
-    );
+    const child = spawn("claude", args, { stdio: ["pipe", "pipe", "pipe"] });
     let buf = "";
     let finalText = "";
     let err = "";
@@ -127,6 +135,40 @@ export function runClaudeStream(prompt, { onText, onLog } = {}, timeoutMs = 3000
     child.stdin.write(prompt);
     child.stdin.end();
   });
+}
+
+// ---------- the persistent doubt-chat session ----------
+//
+// The tutor is ONE long-lived Claude Code session per topic, not a fresh call per question.
+// Claude Code persists sessions to disk, so continuity is achieved by id, not by a resident
+// process: the first turn MINTS the session (`--session-id <uuid>`, a uuid we own), every
+// later turn RESUMES it (`--resume <uuid>`). The conversation therefore survives page
+// reloads, server restarts, and long gaps — a permanent session without a permanent process.
+//
+// The tutor is deliberately tool-less: it explains, it does not act. Denying the filesystem
+// and network tools keeps a learner-facing chat from wandering the repo or the web, so the
+// only thing it can do is answer in words.
+const CHAT_DENIED_TOOLS = [
+  "Bash", "Edit", "Write", "NotebookEdit", "Read", "Glob", "Grep",
+  "Task", "WebFetch", "WebSearch", "TodoWrite",
+].join(",");
+
+export function runClaudeChatStream(
+  prompt,
+  { sessionId, resume = false, systemPrompt, onText, onLog } = {},
+  timeoutMs = 180000
+) {
+  const args = [
+    "-p",
+    "--output-format", "stream-json",
+    "--verbose",
+    "--include-partial-messages",
+    // Mint on the first turn, resume on every turn after it.
+    ...(resume ? ["--resume", sessionId] : ["--session-id", sessionId]),
+    "--disallowed-tools", CHAT_DENIED_TOOLS,
+  ];
+  if (systemPrompt) args.push("--append-system-prompt", systemPrompt);
+  return streamClaude(args, prompt, { onText, onLog }, timeoutMs);
 }
 
 // Model calls that output a raw file (not JSON) fence their code; strip the fence.

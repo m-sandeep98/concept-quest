@@ -13,6 +13,9 @@ vite.config.d.ts
 # runtime authoring queue
 server/queue/
 
+# runtime doubt-chat threads (session ids + transcript mirrors)
+server/chat/
+
 # Playwright MCP screenshot/output artifacts
 .playwright-mcp/
 

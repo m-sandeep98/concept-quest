@@ -63,6 +63,9 @@ you stumbled). Both narration beats are authored per theme and optional — a ba
    the engine flags a **gap** (deterministically, from the play state) and surfaces the **Bottomless
    Pit** sidequest — or emits a **Claude Code ticket** to author new remediation.
 4. Stuck on something we didn't anticipate? Hit **“I don't get this”** → manual ticket.
+5. Still have a doubt? Hit **💬 Ask Claude** (bottom-right) for a tutor chat that stays open while you
+   play. It's **one permanent Claude session per topic** — it remembers what you asked earlier, across
+   page reloads and server restarts, and it knows which level you're on. It won't hand you the solution.
 
 ## How it's built
 
@@ -82,9 +85,13 @@ src/
     GameHost.tsx               # validates level data, mounts the archetype
     AuthorQueue.tsx / tickets.ts # the LIVE self-heal author queue (auto-author) + authoring-server client
     TicketModal.tsx            # explains a ticket the moment a gap is flagged
+    DoubtChat.tsx / useDoubtChat.ts / ChatMessage.tsx # "Ask Claude" drawer: a permanent tutor session per topic
 server/                        # the OFFLINE half of the loop (no LLM in the play loop)
-  server.mjs                   # ticket queue + topic/heal authoring endpoints (SSE stream)
+  server.mjs                   # composition root: CORS gate -> route modules -> 404
+  http.mjs / tickets.mjs       # transport primitives (JSON, SSE, path safety) + the ticket queue store
+  routes/                      # one module per seam: tickets.mjs · topics.mjs · chat.mjs
   author.mjs                   # invokes `claude -p` to author a node/topic/archetype; deterministic fallback; validates all output
+  chat.mjs                     # the doubt-chat session: mint with --session-id, resume with --resume, tool-less tutor
   archetypeGate.mjs            # lint · build · self-test gate for generated archetypes
 public/content/
   character-descent/           # graph.json + themes/{wizard-well,matryoshka}.json

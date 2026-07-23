@@ -575,6 +575,126 @@ code, .mono { font-family: var(--font-mono); color: var(--accent); }
 .topic-authoring { color: var(--violet); font-size: 13px; font-family: var(--font-mono); animation: pulse 1.2s ease-in-out infinite; }
 
 /* =====================================================================
+   Doubt chat → the tutor drawer
+   A permanent Claude session, docked to the right edge. It OVERLAYS rather
+   than resizes: the PixiJS canvas behind it keeps the width its scene was
+   laid out for, so opening the drawer mid-level never reflows the game.
+   ===================================================================== */
+.doubt-launch {
+  position: fixed; right: 22px; bottom: 22px; z-index: 25;
+  display: inline-flex; align-items: center; gap: 9px;
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line-2); border-radius: 999px;
+  padding: 11px 18px; cursor: pointer;
+  font-family: var(--font-hud); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); transition: 0.18s;
+  animation: pop 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.doubt-launch:hover { border-color: var(--violet); box-shadow: var(--glow-violet); }
+.doubt-launch-icon { font-size: 15px; }
+
+.doubt {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 30;
+  width: min(420px, 100vw);
+  display: flex; flex-direction: column;
+  background: var(--panel); border-left: 1px solid var(--line-2);
+  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.55);
+  transform: translateX(100%); transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Fully off-canvas when closed — never a focus trap for keyboard users. */
+  visibility: hidden;
+}
+.doubt.open { transform: none; visibility: visible; }
+
+.doubt-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border-bottom: 1px solid var(--line); flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(143, 130, 255, 0.10), transparent);
+}
+.doubt-id { min-width: 0; }
+.doubt-title {
+  display: block; font-family: var(--font-hud); font-size: 14px;
+  letter-spacing: 0.13em; text-transform: uppercase; color: var(--text);
+}
+.doubt-sub {
+  display: block; margin-top: 3px; font-family: var(--font-mono); font-size: 11px;
+  color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.doubt-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.doubt-state {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--faint); margin-right: 2px;
+}
+.doubt-state.streaming { color: var(--violet); }
+.doubt-state.error { color: var(--bad); }
+.doubt-state.offline { color: var(--warn); }
+.doubt-icon {
+  background: transparent; border: 1px solid transparent; border-radius: 7px;
+  color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 5px 8px; transition: 0.16s;
+}
+.doubt-icon:hover:not(:disabled) { color: var(--text); border-color: var(--line-2); }
+.doubt-icon:disabled { opacity: 0.35; cursor: default; }
+
+.doubt-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+.doubt-empty-lead { margin: 0 0 6px; font-size: 15px; color: var(--text); }
+.doubt-fine { margin: 0; color: var(--faint); font-size: 12.5px; line-height: 1.6; }
+.doubt-starters { display: flex; flex-direction: column; gap: 7px; margin-top: 16px; }
+.doubt-starter {
+  text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px;
+  padding: 10px 12px; color: var(--muted); font-size: 13px; cursor: pointer; transition: 0.16s;
+}
+.doubt-starter:hover:not(:disabled) { color: var(--text); border-color: var(--violet); }
+.doubt-starter:disabled { opacity: 0.5; cursor: default; }
+
+.doubt-msg { display: flex; flex-direction: column; gap: 5px; }
+.doubt-who {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.doubt-msg.user .doubt-who { color: var(--accent); }
+.doubt-msg.assistant .doubt-who { color: var(--violet); }
+.doubt-text { font-size: 14px; line-height: 1.65; color: var(--text); }
+.doubt-text p { margin: 0 0 9px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.doubt-text p:last-child { margin-bottom: 0; }
+.doubt-msg.user .doubt-text {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 9px 12px; color: #d6dffa;
+}
+.doubt-code {
+  background: #05070f; border: 1px solid var(--line); border-radius: 8px;
+  padding: 11px 12px; margin: 0 0 9px; overflow-x: auto;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: #7fd4ff;
+}
+.doubt-inline {
+  font-family: var(--font-mono); font-size: 0.88em; color: var(--accent);
+  background: rgba(53, 224, 255, 0.08); border-radius: 4px; padding: 1px 4px;
+}
+.doubt-text strong { color: #fff; font-weight: 700; }
+.doubt-text em { color: #cbd6f5; }
+.doubt-caret { color: var(--violet); animation: pulse 1s steps(2) infinite; }
+.doubt-thinking { color: var(--violet); font-family: var(--font-mono); font-size: 12.5px; animation: pulse 1.2s ease-in-out infinite; }
+.doubt-error { color: var(--bad); font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; }
+.doubt-offline { color: var(--muted); font-size: 13.5px; line-height: 1.7; }
+.doubt-offline p { margin: 0 0 10px; }
+
+.doubt-compose {
+  display: flex; align-items: flex-end; gap: 8px; padding: 12px;
+  border-top: 1px solid var(--line); flex-shrink: 0; background: var(--bg-2);
+}
+.doubt-input {
+  flex: 1; min-height: 40px; max-height: 140px; resize: vertical;
+  background: #05070f; border: 1px solid var(--line); border-radius: 9px;
+  padding: 11px 12px; color: var(--text); font-family: inherit; font-size: 13.5px; line-height: 1.5;
+}
+.doubt-input:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-soft); }
+.doubt-input:disabled { opacity: 0.5; }
+.doubt-send {
+  background: var(--violet); color: var(--accent-ink); border: none; border-radius: 9px;
+  padding: 0 15px; height: 40px; cursor: pointer; font-size: 15px; font-weight: 700; transition: 0.16s;
+}
+.doubt-send:hover:not(:disabled) { box-shadow: var(--glow-violet); }
+.doubt-send:disabled { opacity: 0.4; cursor: default; }
+
+/* =====================================================================
    Motion
    ===================================================================== */
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -604,6 +724,12 @@ code, .mono { font-family: var(--font-mono); color: var(--accent); }
   .topic-tab.new { margin-top: 0; }
 }
 @media (max-width: 720px) { .author-queue-cols { grid-template-columns: 1fr; } }
+/* On a phone the drawer takes the whole screen — a 420px rail beside nothing is worse
+   than a full-screen sheet, and the launcher shrinks so it stops covering the map. */
+@media (max-width: 520px) {
+  .doubt { width: 100vw; border-left: none; }
+  .doubt-launch { right: 14px; bottom: 14px; padding: 10px 14px; font-size: 12px; }
+}
 @media (max-width: 700px) { .rd-stage { grid-template-columns: 1fr; } }
 
 /* Below this width the DAG can't breathe — fall back to a stacked list with a
