@@ -34,7 +34,7 @@ The scalability bet. An archetype is keyed to a concept's **shape**, not its sub
 ~8–12 archetypes, each re-themeable, cover most of general knowledge. **Four ship today**, each proving the
 shape/theme split over ONE `graph.json`: `character-descent` skins as `wizard-well` (code) and `matryoshka`
 (no code); `binary-search` as `vault-heist` and `library`; `batch-packing` as `gpu-vllm` and `kitchen`; and
-`state-traversal` ships `fsm-basics` (this archetype was **generated live** — see §7). Every archetype renders
+`state-traversal` ships `fsm-basics` (this archetype was **generated live** — see §8). Every archetype renders
 on a 2D **PixiJS** stage where a character acts out the concept. (Honest caveat: nesting is one of the
 *rarer* shapes.)
 
@@ -97,7 +97,7 @@ archetype. Heal tickets carry both `domain` (where to write) and `shape` (how to
 Authoring routes the concept to whichever built archetype's shape fits — `character-descent` (recursion/
 nesting), `binary-search` (lookup/search/divide-and-conquer), `batch-packing` (resource/throughput), or
 `state-traversal` (state + transition). When **no** existing shape fits, it falls through to on-the-go
-archetype generation (§7) rather than forcing a bad fit.
+archetype generation (§8) rather than forcing a bad fit.
 
 Limits: authored topics currently ship with empty `failureModes` (so the self-heal loop doesn't fire on them
 yet), and authoring is a ~1-2 min `claude -p` call (a full archetype generation is longer — seven model calls
@@ -118,7 +118,33 @@ terminal), mirroring Vibe-Kanban's board+stream split.
 Claude Code. Productizing to many users requires each user's own account/API key (a single dev account
 may not proxy many end-users). See README.
 
-## 7. On-the-go archetype generation (Stage 2)
+## 7. Doubt chat — a permanent Claude session per topic
+
+The learning loop answers the doubts we *anticipated* (authored `frame`/`reveal` beats) and the gaps the
+engine can *detect* (signals → sidequest or ticket). Neither covers "wait, why does that work?" — so the
+drawer does: **Ask Claude**, a chat docked to the right edge, available on the map and mid-level.
+
+It is *permanent by session id, not by process.* Claude Code persists sessions to disk, so continuity
+needs no resident child: the first turn mints the session (`--session-id <uuid>`, a uuid we own), every
+later turn resumes it (`--resume <uuid>`). The conversation therefore survives closing the drawer,
+reloading the page, restarting the server, and overnight gaps. `server/chat.mjs` owns the id plus a
+*mirror* of the transcript for repainting the UI — the conversational memory lives in the session itself,
+which is why old turns are never replayed into the prompt. One thread per topic (`server/chat/<slug>.json`),
+because a doubt about recursion isn't a doubt about batching. A resume that fails (pruned or stale
+session) mints a fresh one and retries once, so a thread degrades to amnesia rather than to a dead end.
+
+Two deliberate constraints. The tutor is **tool-less** — `--disallowed-tools` denies the filesystem,
+shell, and network, so a learner-facing chat can't wander the repo or the web; it explains, it doesn't
+act. And its standing role arrives via `--append-system-prompt`: answer inside the theme for intuition,
+then name the abstract idea, and *don't hand over the level's solution.* Where the player is standing
+(topic, archetype, theme, current level) rides along with every turn, so answers land on the level in
+front of them.
+
+The drawer **overlays rather than resizes** — the PixiJS canvas behind it keeps the width its scene was
+laid out for, so opening the chat mid-level never reflows the game. This is the third offline seam, and
+like the other two it is opt-in: without `npm run server` the drawer says so and the game plays on.
+
+## 8. On-the-go archetype generation (Stage 2)
 
 The registry registers each shape from its `archetype.manifest.json` and lazy-loads the archetype's Pixi
 render layer (`module.ts` → `Component.tsx` + `scene.ts`) on demand — so a still-being-generated archetype

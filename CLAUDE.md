@@ -22,7 +22,7 @@ from play states.
 
 ```bash
 npm run dev            # play-time app        (Vite; auto-picks a free port, prints its URL)
-npm run server         # authoring server     (prefers :8787, scans up if busy; only for New Topic + self-heal)
+npm run server         # authoring server     (prefers :8787, scans up if busy; New Topic + self-heal + doubt-chat)
 npm run dev:all        # BOTH on free ports, proxy auto-wired (one command; recommended)
 npm run build          # tsc -b && vite build (the CI-style correctness check)
 npm run graph          # build/refresh the code graph (graphify; deterministic, idempotent, no LLM)
@@ -36,7 +36,8 @@ src/
                               touches the registry
   types.ts                    THE contract: GameModule / GameProps / Graph / Theme. The hub.
   shell/                      game-agnostic UI + logic (Map, GameHost, AuthorQueue, Terminal,
-                              contentLoader, progress, tickets, authoring). Knows NO specific game.
+                              DoubtChat, contentLoader, progress, tickets, authoring). Knows NO
+                              specific game.
   archetypes/
     registry.ts               shape -> GameModule. The single wiring point; MANIFEST-driven +
                               fault-isolated (an unfinished archetype is skipped, never fatal).
@@ -46,9 +47,12 @@ src/
     batchPacking/             same layout — resource/throughput batching (the "why vLLM" shape)
     stateTraversal/           same layout — state + transition (FSM); GENERATED live by claude -p (Stage 2)
 public/content/<domain>/      authored data: graph.json + themes/*.json  (NOT code — file drops)
-server/                       offline `claude -p` authoring, split by seam: orchestrators (author.mjs)
-                              over claude.mjs (CLI) · prompts.mjs · content.mjs (IO) · validate.mjs ·
-                              util.mjs; the Stage-2 gate (archetypeGate.mjs); SSE server (server.mjs)
+server/                       offline `claude -p` work, split by seam. server.mjs is a composition
+                              root ONLY (CORS gate → route modules → 404); routes/{tickets,topics,
+                              chat}.mjs are the seams; orchestrators (author.mjs, chat.mjs) sit over
+                              claude.mjs (CLI) · prompts.mjs · content.mjs (IO) · validate.mjs ·
+                              http.mjs + tickets.mjs (transport + queue store) · util.mjs; the
+                              Stage-2 gate is archetypeGate.mjs
 schema/graph.schema.json      JSON Schema for authored graphs
 ```
 
@@ -58,6 +62,8 @@ schema/graph.schema.json      JSON Schema for authored graphs
 (existing sidequest node) or a `generate:` ticket to the server. Around the game, `GameHost` sequences
 optional per-`ThemeNode` `learn` beats — a `frame → play → reveal` loop that primes the question, then
 names the abstract concept after the win; absent beats degrade to today's straight-to-play behavior.
+Alongside all of it, `DoubtChat` is a right-edge drawer holding **one permanent Claude session per
+topic** for questions the authored beats and the gap engine don't cover.
 
 ### HARD RULES (verified to hold today — keep them holding)
 
@@ -126,8 +132,18 @@ keeps docs/lockfile/generated dirs out of it.
 
 ## Gotchas
 
-- **Authoring is offline & opt-in.** The browser never calls an LLM. `New Topic` / self-heal need
-  `npm run server` running; the game plays fully without it.
+- **Authoring is offline & opt-in.** The browser never calls an LLM. `New Topic` / self-heal / the
+  doubt-chat need `npm run server` running; the game plays fully without it.
+- **The doubt-chat is permanent by session id, not by process.** `server/chat.mjs` mints a uuid and
+  passes `--session-id` on the first turn, `--resume` on every turn after — so the thread survives
+  reloads and server restarts with no resident child process. The transcript on disk
+  (`server/chat/<topic>.json`, git-ignored) is only a **mirror for repainting the UI**; the real memory
+  lives in the Claude Code session, so never replay old turns into the prompt. The tutor is tool-less
+  by design (`--disallowed-tools`) — it explains, it must not act on the repo.
+- **Keep files small; split by seam.** `server.mjs` is a composition root only — add a seam by adding
+  a module to `server/routes/` and listing it in `ROUTES`, never by growing the dispatcher. On the
+  client, keep transport/state in a hook and presentation in the component (`useDoubtChat.ts` /
+  `DoubtChat.tsx` / `ChatMessage.tsx`).
 - **Authored topics ship empty `failureModes`** → the self-heal loop doesn't fire on them yet.
 - **An unfinished archetype no longer crashes the app.** A dir with `module.ts` but a missing render
   layer (`Component.tsx`/`scene.ts` not written yet) is *skipped* by the registry (its Pixi layer loads

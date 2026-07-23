@@ -10,6 +10,8 @@ import NewTopicModal from "./shell/NewTopicModal";
 import Sidebar from "./shell/Sidebar";
 import AgentDock from "./shell/AgentDock";
 import Terminal from "./shell/Terminal";
+import DoubtChat from "./shell/DoubtChat";
+import { useDoubtChat } from "./shell/useDoubtChat";
 import { useAuthoring } from "./shell/useAuthoring";
 import { postTicket } from "./shell/tickets";
 import {
@@ -37,7 +39,11 @@ export default function App() {
   const [reloadKey, setReloadKey] = useState(0);
   const [dockTab, setDockTab] = useState<"author" | "terminal">("author");
   const [dockCollapsed, setDockCollapsed] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const authoring = useAuthoring();
+  // One permanent Claude session per topic. Lives here (not in the drawer) so the
+  // conversation survives closing and reopening the drawer.
+  const chat = useDoubtChat(domainSlug);
 
   useEffect(() => {
     loadDomainsIndex().then((d) => {
@@ -156,6 +162,18 @@ export default function App() {
     domains.filter((d) => d.parent === domainSlug && d.fromConcept).map((d) => [d.fromConcept as string, d])
   );
 
+  // What the tutor should know about where the player is standing. Recomputed as they move,
+  // and sent with every question so answers land on the level actually in front of them.
+  const playingNode = ready && view.mode === "play" ? nodeById(view.nodeId) : null;
+  const chatContext = {
+    topic: domains.find((d) => d.slug === domainSlug)?.label || domainSlug,
+    shape: graph?.shape,
+    subject: theme?.subject,
+    concept: playingNode?.concept,
+    nodeTitle: playingNode ? theme?.nodes[playingNode.id]?.title : undefined,
+    where: playingNode ? "playing a level" : "the topic map",
+  };
+
   const agent =
     authoring.status === "running"
       ? { cls: "run", label: "authoring" }
@@ -265,6 +283,27 @@ export default function App() {
         }
         terminal={<Terminal entries={authoring.entries} status={authoring.status} error={authoring.error} />}
       />
+
+      <DoubtChat
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        messages={chat.messages}
+        pending={chat.pending}
+        status={chat.status}
+        error={chat.error}
+        busy={chat.busy}
+        offline={chat.offline}
+        onAsk={chat.ask}
+        onReset={chat.reset}
+        context={chatContext}
+      />
+      {!chatOpen && (
+        <button className="doubt-launch" onClick={() => setChatOpen(true)} title="Ask Claude about this concept">
+          <span className="doubt-launch-icon">💬</span>
+          Ask Claude
+          {chat.busy && <span className="run-dot" />}
+        </button>
+      )}
 
       {modalTicket && ready && <TicketModal ticket={modalTicket} shape={graph!.shape} onClose={() => setModalTicket(null)} />}
       {newTopicOpen && <NewTopicModal onClose={() => setNewTopicOpen(false)} onSubmit={submitNewTopic} />}
