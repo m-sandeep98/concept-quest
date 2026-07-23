@@ -4,7 +4,7 @@
   "exampleDomain": "batch-packing",
   "blurb": "packing work into a fixed-capacity resource in as few batches as possible — keep the resource full for throughput without overflowing its memory (batching, scheduling, parallelism, GPU/vLLM serving, bin-packing).",
   "classify": "packing many items into a fixed-capacity resource across batches to maximize throughput without overflowing memory (batching, scheduling, pipelining, parallelism, GPU serving / vLLM, bin-packing). Choose for throughput / utilization / 'why batch' concepts.",
-  "levelFormat": "node.level = {capacity:int, budget:int (max batches for a clean win), requests:[{id:string,size:int ≤ capacity}]}, with sum(sizes) ≤ capacity×budget so it is solvable. Theme has vocab{resource,item,batch,capacityLabel,unit,runWord,hint} + visual{accent,actorIcon}; each node entry {title,hook,winText,failText?} with failText keys \"underutilize\" and \"overcommit\".",
+  "levelFormat": "node.level = {capacity:int, budget:int (max batches for a clean win), requests:[{id:string,size:int ≤ capacity}]}, with sum(sizes) ≤ capacity×budget so it is solvable. Theme has vocab{resource,item,batch,capacityLabel,unit,runWord,hint} + visual{accent,actorIcon}; each node entry {title,hook,winText,failText?} with failText keys \"underutilize\" and \"overcommit\". Node entries MAY also optionally carry learn:{frame?,reveal:{concept?,body,inTheWild?},insights?} (shell-sequenced frame→play→reveal beats, optional).",
   "drillLevelFormat": "For batch-packing: node.level = {capacity:int, budget:int, requests:[{id,size ≤ capacity}]} with sum(sizes) ≤ capacity×budget. failText keys are \"underutilize\" and \"overcommit\".",
   "requiredThemeVocab": [],
   "failureModes": [

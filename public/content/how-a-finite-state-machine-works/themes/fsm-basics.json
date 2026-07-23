@@ -20,7 +20,15 @@
     "warmup": {
       "title": "One Symbol, One Hop",
       "hook": "A machine sits in a state. Read the next symbol, find the arrow labeled with it, and move the token where it points. That single hop is all a state machine ever does.",
-      "winText": "You followed the labeled arrow to the next state. Repeat that for every symbol and you're running the whole machine."
+      "winText": "You followed the labeled arrow to the next state. Repeat that for every symbol and you're running the whole machine.",
+      "learn": {
+        "frame": "The token sits in one state and reads a symbol — what decides where it goes next, with no guessing?",
+        "reveal": {
+          "concept": "transition",
+          "body": "The current state plus the symbol you just read pick exactly one arrow — no choice, no ambiguity. That single (state, symbol) → next-state hop is a TRANSITION, the one move a machine ever makes.",
+          "inTheWild": "A turnstile: locked + coin → unlocked. One state, one input, one next state."
+        }
+      }
     },
     "coin-flow": {
       "title": "Follow the Labels",
@@ -29,6 +37,16 @@
       "failText": {
         "wrong-transition": "You moved the token down an arrow that doesn't match the symbol. Read the symbol first, then take only the arrow with that exact label.",
         "incomplete": "You stopped before reading the whole input. The machine only decides once every symbol is consumed."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Symbol by symbol, each one took the single arrow bearing its label and no other. Running a machine is just walking those labeled arrows in the exact order the input arrives.",
+          "inTheWild": "A regex engine reads your string one character at a time, following exactly the edge that character labels."
+        },
+        "insights": {
+          "wrong-transition": "Each (state, symbol) pair maps to exactly ONE arrow — that's determinism. Take a differently-labeled arrow and you're no longer running this machine; you've invented a different one.",
+          "incomplete": "The verdict is a property of the FULL run, not any single hop. Stop early and there's no answer yet — accept and reject both wait until the last symbol is read."
+        }
       }
     },
     "loop-back": {
@@ -38,6 +56,17 @@
       "failText": {
         "wrong-transition": "You skipped the loop-back arrow. When the symbol matches a self-loop, take it — the token stays put rather than jumping ahead.",
         "incomplete": "Input left unread. Keep hopping — even through loops — until every symbol is gone."
+      },
+      "learn": {
+        "reveal": {
+          "concept": "self-loop",
+          "body": "An arrow can point a state back at itself. When the symbol matches that loop, the token stays put and still counts the symbol as read. Staying in place is a legal move, not a stall.",
+          "inTheWild": "'ignore whitespace' in a lexer, or an idle UI state that eats repeated clicks without changing screen."
+        },
+        "insights": {
+          "wrong-transition": "A self-loop is a real transition — same source and target, but still the one arrow for that symbol. Skipping it to 'move on' breaks determinism exactly like any other wrong hop.",
+          "incomplete": "Every hop — loop or not — eats exactly one symbol, so a run is always as long as the input. Loops don't add or skip steps; you're not done until all of them are consumed."
+        }
       }
     },
     "boss-cycle": {
@@ -47,6 +76,18 @@
       "failText": {
         "wrong-transition": "One hop took an arrow the symbol didn't label. A deterministic machine has exactly one right arrow per symbol — follow it, don't guess.",
         "incomplete": "You halted with symbols still unread. Accept or reject is decided only after the entire input is consumed."
+      },
+      "learn": {
+        "frame": "No hints now — a long string, branches, loops. What two things have to hold for the machine to ACCEPT it?",
+        "reveal": {
+          "concept": "acceptance",
+          "body": "Every symbol took its one matching arrow, and after the last one the token sat on an accepting state. Both at once — a legal hop per symbol AND an accepting state at the end — is what ACCEPTANCE means.",
+          "inTheWild": "Exactly how a regex or lexer decides a match: a legal transition per character, an accepting state when the input runs out."
+        },
+        "insights": {
+          "wrong-transition": "Determinism is the machine's contract: one arrow per (state, symbol). Break it on even one hop and the whole run is invalid — the machine can't accept a path it was never allowed to take.",
+          "incomplete": "Acceptance is judged only at the END, over the full input. Halting early, or ending on a non-accepting state, both mean reject — where you stop counts as much as how you got there."
+        }
       }
     },
     "reset-drill": {
@@ -56,6 +97,12 @@
       "failText": {
         "wrong-transition": "That arrow's label didn't match the symbol. Match the label before you move.",
         "incomplete": "You stopped short. Run every symbol before the machine decides."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Three symbols, three hops, each down the arrow its symbol labels, ending accepting. That tight loop — read, match, hop, repeat — is the entire habit every machine runs on.",
+          "inTheWild": "Every state machine, from a vending machine to a TCP connection, is just this loop repeated."
+        }
       }
     }
   }

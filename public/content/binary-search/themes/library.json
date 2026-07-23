@@ -19,7 +19,15 @@
     "first-cut": {
       "title": "Start in the Middle",
       "hook": "Eight books, shelved in order. A beginner starts at book one. A librarian pulls the MIDDLE book — its number says which way to go.",
-      "winText": "Middle first, then the middle of the half that was left. Sorted shelves are made for this."
+      "winText": "Middle first, then the middle of the half that was left. Sorted shelves are made for this.",
+      "learn": {
+        "frame": "The shelf is sorted end to end, but you've only got a few checks — which book do you pull FIRST?",
+        "reveal": {
+          "concept": "the middle pull",
+          "body": "Pulling the MIDDLE book let its call number point you at the right half — so one check ruled out the other half of the shelf. Start at the middle: it's the habit the whole method rests on.",
+          "inTheWild": "a paper dictionary — nobody starts at page one, you flip to the middle and split from there."
+        }
+      }
     },
     "halving": {
       "title": "Halve the Shelf",
@@ -27,6 +35,15 @@
       "winText": "Every check tossed half the shelf. Twelve books down to one in a few pulls — that's the payoff of sorted order.",
       "failText": {
         "not-halving": "You found it, but you slid book by book. Pull the MIDDLE of what's left each time and the shelf halves with every check."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Each pull landed on the middle of the live shelf, so twelve became six became three. Halving what's left every check is where the speed comes from.",
+          "inTheWild": "log₂(n) checks: a thousand books found in ten, a million in twenty."
+        },
+        "insights": {
+          "not-halving": "Sliding spine by spine still finds the book — but that's a linear scan, n checks. Halving is the whole win: each pull cuts the remaining shelf in two, turning n into log n. Skip it and shelving in order gained you nothing."
+        }
       }
     },
     "trust-clues": {
@@ -35,6 +52,15 @@
       "winText": "You trusted every call number and stayed on the live side of the shelf. That discipline is what keeps the search fast.",
       "failText": {
         "ignored-feedback": "You pulled a book the numbers had already ruled out. A greyed side can't hold the target — keep every check inside the live range."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Every call number greyed out a whole side of the shelf, and you only pulled from what stayed lit. Letting the number discard half is what keeps the shelf shrinking.",
+          "inTheWild": "looking up a word: the page you land on tells you to flip left or right, never both."
+        },
+        "insights": {
+          "ignored-feedback": "Because the shelf is sorted, a number above the target proves the target is entirely to the left — a certainty, not a guess. Re-checking a greyed book re-searches shelf you already ruled out; believing the number is what earns you the right to drop half."
+        }
       }
     },
     "boss-vault": {
@@ -44,12 +70,30 @@
       "failText": {
         "not-halving": "Too many checks — you didn't halve. Sixteen books needs only four middle-pulls.",
         "ignored-feedback": "You re-checked a greyed-out book. Trust every number — that's what makes four checks enough."
+      },
+      "learn": {
+        "frame": "Both habits now, no prompts: halve the shelf AND believe every number — what do they add up to together?",
+        "reveal": {
+          "concept": "binary search",
+          "body": "Middle to split, the call number to choose the surviving half, repeat — sixteen books down to one in four checks. Halving guided by the number, all the way, IS binary search.",
+          "inTheWild": "std::lower_bound, a database index seek, git bisect — each one halves and follows the comparison."
+        },
+        "insights": {
+          "not-halving": "The halving is the speed: four checks only reach sixteen books if each one drops half the shelf. Slide instead of split and four pulls fall short.",
+          "ignored-feedback": "The number is what makes each cut valid — it proves which half to keep. Ignore it and you're halving blind, with no promise the book is even on the side you held onto."
+        }
       }
     },
     "narrow-drill": {
       "title": "SIDE-QUEST · Middle Every Time",
       "hook": "Drill one habit: after each check, go to the MIDDLE of whatever's still lit. Eight books, go.",
-      "winText": "Middle every time — you halved the shelf on every check. That habit IS binary search."
+      "winText": "Middle every time — you halved the shelf on every check. That habit IS binary search.",
+      "learn": {
+        "reveal": {
+          "body": "After each check you went straight to the middle of the lit shelf — nothing fancier. Middle, middle, middle until one spine is left is the engine under the whole thing.",
+          "inTheWild": "the midpoint every loop: mid = (lo + hi) / 2."
+        }
+      }
     }
   }
 }

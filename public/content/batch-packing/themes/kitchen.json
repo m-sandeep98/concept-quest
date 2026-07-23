@@ -20,7 +20,15 @@
     "warmup": {
       "title": "One Oven, Many Trays",
       "hook": "A slow baker bakes ONE tray at a time. Your oven fits several — slide them into a single bake and they cook together.",
-      "winText": "Baked together, one round did the work of three. That's the whole trick of batching."
+      "winText": "Baked together, one round did the work of three. That's the whole trick of batching.",
+      "learn": {
+        "frame": "The oven fits several trays at once — so why would a baker ever bake them one at a time?",
+        "reveal": {
+          "concept": "batching",
+          "body": "Heating the oven is a big fixed cost, paid once per round no matter how many trays are inside. Slide them all into a single bake and that heat is spent ONCE for all of them. That's BATCHING.",
+          "inTheWild": "One oven, one heat-up, many trays — the cost of firing it up shared across the whole bake."
+        }
+      }
     },
     "pack-tight": {
       "title": "Fill the Oven",
@@ -29,6 +37,16 @@
       "failText": {
         "underutilize": "You spread the trays too thin — the oven idled between tiny bakes. Fill each bake fuller and the round count drops.",
         "overcommit": "That bake needed more oven space than you have — trays would burn. Move one to another bake."
+      },
+      "learn": {
+        "reveal": {
+          "body": "The oven cooled between thin bakes because each round costs a full heat-up no matter how full it is. Filling every bake to the brim spreads that cost over more trays — fewer, fuller rounds. That's more cakes per hour.",
+          "inTheWild": "A busy bakery never runs a half-empty oven — trays go in the moment there's room."
+        },
+        "insights": {
+          "underutilize": "The oven costs a full heat-up whether it holds one tray or eight. One tray per bake pays for that heat with almost nothing to show — full bakes share it across many trays.",
+          "overcommit": "The oven's size is a hard limit, not a suggestion. Cram past it and nothing cooks right, so overpacking gains you nothing — fill to the edge, then start another bake."
+        }
       }
     },
     "respect-memory": {
@@ -38,6 +56,16 @@
       "failText": {
         "underutilize": "Fewer, fuller bakes would finish sooner — the oven idled. But watch the limit as you fill.",
         "overcommit": "A bake went over the oven's space. When a tray is big, give it room — split the bake."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Fill tight, but the oven's space is a hard limit — a bake can't hold more than fits. The trick is to load each round right up to the edge and no further.",
+          "inTheWild": "A pro loads the oven to its last slot without crowding — full heat, nothing burnt."
+        },
+        "insights": {
+          "underutilize": "Empty oven slots are cakes you didn't bake this round — the oven runs the same either way, so a half-empty bake is half the output.",
+          "overcommit": "Going over the oven's space doesn't slow the bake, it ruins it — everything comes out wrong. The limit is the real ceiling: fill up to it, never past."
+        }
       }
     },
     "boss-serve": {
@@ -47,12 +75,30 @@
       "failText": {
         "underutilize": "Too many bakes — the oven idled and orders piled up. Fill the bakes fuller.",
         "overcommit": "A bake went over the oven's space. Rebalance the trays so each bake fits."
+      },
+      "learn": {
+        "frame": "Fewer bakes means more cakes, but an over-stuffed oven spoils the batch — so where's the perfect load?",
+        "reveal": {
+          "concept": "throughput",
+          "body": "The most cakes per hour come from the fullest load the oven allows — one slot under the limit, never over. Too empty wastes the heat; too full ruins the bake. The sweet spot is right at the edge.",
+          "inTheWild": "A working kitchen fills every oven to the brim, round after round — that steady flow is throughput."
+        },
+        "insights": {
+          "underutilize": "A full heat-up costs the same every round, so fewer, fuller bakes always win — an idle oven is time you can't get back.",
+          "overcommit": "The oven's limit is absolute: one tray too many and the whole bake is spoiled. The fastest, safest load sits right at the edge, never over it."
+        }
       }
     },
     "batch-drill": {
       "title": "SIDE-QUEST · Fill One Bake",
       "hook": "Drill the habit: three small trays, one bake, room for all of them. Put them ALL in bake 1.",
-      "winText": "All three in a single bake — the fastest move. Fill first, always."
+      "winText": "All three in a single bake — the fastest move. Fill first, always.",
+      "learn": {
+        "reveal": {
+          "body": "When it all fits, one bake is always right — one heat-up, paid once, every tray done together. Fill first.",
+          "inTheWild": "The habit behind any high-output kitchen: gather the trays before you fire the oven."
+        }
+      }
     }
   }
 }
