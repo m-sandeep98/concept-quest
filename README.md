@@ -70,7 +70,7 @@ you stumbled). Both narration beats are authored per theme and optional — a ba
 src/
   types.ts                     # the GameModule contract + content-graph types
   archetypes/
-    registry.ts                # shape -> archetype; auto-discovers */module.ts (no edit to add one)
+    registry.ts                # shape -> archetype; manifest-driven, render layer lazy-loaded (no edit to add one; an unfinished archetype is skipped, not fatal)
     characterDescent/          # recursion (2D/PixiJS): engine.ts + scene.ts + CharacterDescent.tsx + module.ts + manifest
     binarySearch/              # binary search — same layout
     batchPacking/              # resource/throughput batching — same layout

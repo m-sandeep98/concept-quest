@@ -425,6 +425,7 @@ code, .mono { font-family: var(--font-mono); color: var(--accent); }
 .gh-title { margin: 4px 0 6px; font-family: var(--font-display); font-size: 23px; letter-spacing: -0.01em; }
 .gh-hook { margin: 0 0 18px; color: var(--muted); font-size: 15px; line-height: 1.55; }
 .gh-error { color: var(--bad); padding: 20px; text-align: center; font-family: var(--font-mono); }
+.gh-boot { color: var(--muted); padding: 20px; text-align: center; font-family: var(--font-mono); }
 
 /* ---------- Recursive Descent ---------- */
 .rd { display: flex; flex-direction: column; gap: 16px; }

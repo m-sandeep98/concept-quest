@@ -120,8 +120,11 @@ may not proxy many end-users). See README.
 
 ## 7. On-the-go archetype generation (Stage 2)
 
-The registry auto-discovers `src/archetypes/*/module.ts`, and each archetype self-describes its authoring
-contract in an `archetype.manifest.json`. So when a concept fits **none** of the built shapes, Claude Code
+The registry registers each shape from its `archetype.manifest.json` and lazy-loads the archetype's Pixi
+render layer (`module.ts` → `Component.tsx` + `scene.ts`) on demand — so a still-being-generated archetype
+is fault-isolated (skipped, never a boot-time crash) rather than taking the whole app down mid-authoring.
+Each archetype self-describes its authoring contract in that manifest. So when a concept fits **none** of
+the built shapes, Claude Code
 authors a brand-new archetype from scratch — its pure `engine.ts`, PixiJS `scene.ts` + `Component.tsx`, CSS,
 and manifest — as **seven small single-file model calls** (one whole-archetype call times out locally).
 
@@ -162,8 +165,10 @@ interface GameProps<L> {
    deterministic, emits the signals **and exports `validate`**), and a thin `module.ts` re-exporting them
    as a `GameModule`. Keeping `validate` in the pure `engine.ts` lets the offline authoring server run the
    *same* boundary check (it transpiles the engine and calls `validate` in a sandboxed subprocess).
-2. Drop an `archetype.manifest.json` beside `module.ts` — the registry auto-discovers the module via glob
-   (no edit to `registry.ts`), and the offline author reads the manifest to classify concepts onto your shape.
+2. Drop an `archetype.manifest.json` beside `module.ts` — the registry registers the shape from that manifest
+   (no edit to `registry.ts`) and lazy-loads the render layer on play; the offline author reads the manifest to
+   classify concepts onto your shape. Until the render layer exists the shape is skipped, and `cq:archetype-guard`
+   (in `vite.config.ts`) names the missing file — a dev warning, a failing `vite build`.
 3. Author `public/content/timeline/graph.json` + theme skins.
 
 The map, progress, gap engine, tickets, and theming are untouched. Each archetype may render however it

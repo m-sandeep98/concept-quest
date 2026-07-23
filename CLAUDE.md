@@ -38,7 +38,8 @@ src/
   shell/                      game-agnostic UI + logic (Map, GameHost, AuthorQueue, Terminal,
                               contentLoader, progress, tickets, authoring). Knows NO specific game.
   archetypes/
-    registry.ts               shape -> GameModule. The single wiring point; auto-globs */module.ts.
+    registry.ts               shape -> GameModule. The single wiring point; MANIFEST-driven +
+                              fault-isolated (an unfinished archetype is skipped, never fatal).
     characterDescent/         Component.tsx + scene.ts (PixiJS renderer) + engine.ts (pure) + module.ts
                               + archetype.manifest.json (self-describes the offline authoring contract)
     binarySearch/             same layout: Component.tsx + scene.ts + engine.ts + module.ts + manifest
@@ -83,8 +84,12 @@ Before finishing a change, sanity-check rules 1–3 with the graph (below) or:
    `server/archetypeGate.mjs`), so there is **no per-shape validation to hard-code server-side**. Keep
    `engine.ts` free of React/Pixi — the scene only *draws* the engine's output, so the correctness-critical
    logic stays pure and testable.
-2. **No registry edit** — `registry.ts` auto-discovers `src/archetypes/*/module.ts` via `import.meta.glob`.
-   Instead, drop an `archetype.manifest.json` beside `module.ts` so the offline author can classify concepts
+2. **No registry edit** — `registry.ts` registers your shape from its `archetype.manifest.json` (globbed
+   eagerly with the pure `engine.ts` that owns `validate`) and **lazy-loads** the Pixi render layer
+   (`module.ts` → `Component.tsx` + `scene.ts`) only when the game is played. So a half-authored archetype
+   (manifest + engine present, render layer not yet written) is *skipped*, not fatal — the app still boots,
+   and the `cq:archetype-guard` Vite plugin (in `vite.config.ts`) names the missing file: a warning in dev,
+   a hard `vite build`/CI failure. Drop an `archetype.manifest.json` beside `module.ts` so the offline author can classify concepts
    onto your shape and author valid `level`/theme data (declares `blurb`, `classify`, `levelFormat`,
    `drillLevelFormat`, `failureModes`, `requiredThemeVocab`, `exampleDomain`). The server reads manifests —
    it no longer hard-codes the shape list.
@@ -124,6 +129,10 @@ keeps docs/lockfile/generated dirs out of it.
 - **Authoring is offline & opt-in.** The browser never calls an LLM. `New Topic` / self-heal need
   `npm run server` running; the game plays fully without it.
 - **Authored topics ship empty `failureModes`** → the self-heal loop doesn't fire on them yet.
+- **An unfinished archetype no longer crashes the app.** A dir with `module.ts` but a missing render
+  layer (`Component.tsx`/`scene.ts` not written yet) is *skipped* by the registry (its Pixi layer loads
+  lazily) and named by `cq:archetype-guard` — a dev warning, a failing `vite build`. Finish the render
+  layer or delete the dir to clear it. (Before this, one half-scaffolded dir took the whole app down.)
 - **`node_modules`, `dist`, `vite.config.js/.d.ts`, tsbuildinfo are symlinks** to a sibling checkout —
   don't be surprised; they're git-ignored build artifacts.
 - After nontrivial changes, run `npm run build` (it typechecks the whole project) and, for UI, the

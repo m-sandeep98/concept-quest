@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { Component, Suspense, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { GameModule, GraphNode, LearnBeats, Theme, ThemeNode } from "../types";
 
@@ -50,18 +50,26 @@ export default function GameHost({ node, theme, gameModule, onSignal, onComplete
     body = <div className="gh-error">No archetype registered for shape “{node.shape}”.</div>;
   } else {
     try {
+      // validate is synchronous (it lives in the pure, eagerly-loaded engine). The COMPONENT
+      // is lazy (registry defers the Pixi render layer), so it renders inside <Suspense>, and
+      // a missing/broken render layer for an in-progress archetype rejects into the boundary
+      // below instead of crashing the app — fault isolation, not a white screen.
       const level = gameModule.validate(node.level);
       const Game = gameModule.component;
       body = (
-        <Game
-          level={level}
-          theme={theme}
-          themeNode={tn}
-          onSignal={handleSignal}
-          onComplete={(r) => {
-            if (r.won) finishPlay();
-          }}
-        />
+        <GameErrorBoundary shape={node.shape}>
+          <Suspense fallback={<div className="gh-boot">loading game…</div>}>
+            <Game
+              level={level}
+              theme={theme}
+              themeNode={tn}
+              onSignal={handleSignal}
+              onComplete={(r) => {
+                if (r.won) finishPlay();
+              }}
+            />
+          </Suspense>
+        </GameErrorBoundary>
       );
     } catch (e) {
       body = <div className="gh-error">Invalid level data: {String(e)}</div>;
@@ -69,6 +77,28 @@ export default function GameHost({ node, theme, gameModule, onSignal, onComplete
   }
 
   return <Shell node={node} tn={tn} onExit={onExit} onEscapeHatch={onEscapeHatch}>{body}</Shell>;
+}
+
+// Catches a lazy render layer that fails to load (an archetype whose Component.tsx/scene.ts
+// isn't authored yet, or a runtime crash inside the game) so ONE unfinished/broken archetype
+// degrades to a message instead of taking down the whole app. React error boundaries must be
+// class components.
+class GameErrorBoundary extends Component<{ shape: string; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="gh-error">
+          The “{this.props.shape}” game isn’t ready — its render layer (Component.tsx + scene.ts)
+          is missing or failed to load.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function FrameCard({ text, onBegin }: { text: string; onBegin: () => void }) {
