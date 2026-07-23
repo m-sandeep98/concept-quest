@@ -4,7 +4,7 @@
   "exampleDomain": "binary-search",
   "blurb": "search by halving — repeatedly split a SORTED range in half to home in on a target (lookup, guessing games, dictionary/library search, divide-and-conquer).",
   "classify": "searching a SORTED range by halving (lookup, guessing, dictionary/library search, divide-and-conquer). Choose for find/lookup/guess concepts.",
-  "levelFormat": "node.level = {values:[strictly-ascending ints],targetIndex:int,budget:int}. Theme has vocab{target,higher,lower,probeWord,hint} + visual{accent,actorIcon,coreIcon}; each node entry {title,hook,winText,failText?} with failText keys \"not-halving\" and \"ignored-feedback\".",
+  "levelFormat": "node.level = {values:[strictly-ascending ints],targetIndex:int,budget:int}. Theme has vocab{target,higher,lower,probeWord,hint} + visual{accent,actorIcon,coreIcon}; each node entry {title,hook,winText,failText?} with failText keys \"not-halving\" and \"ignored-feedback\". Node entries MAY also optionally carry learn:{frame?,reveal:{concept?,body,inTheWild?},insights?} (shell-sequenced frame→play→reveal beats, optional).",
   "drillLevelFormat": "For binary-search: node.level = {values:[strictly-ascending ints], targetIndex:int in range, budget?:int}. failText keys are \"not-halving\" and \"ignored-feedback\".",
   "requiredThemeVocab": [],
   "failureModes": [

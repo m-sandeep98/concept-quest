@@ -19,7 +19,15 @@
     "first-cut": {
       "title": "The First Cut",
       "hook": "Eight vaults, sorted low to high. Don't start at the end — crack the MIDDLE one first. It tells you which half the target hides in.",
-      "winText": "One cut down the middle, then the middle of what was left. That halving is the whole trick behind binary search."
+      "winText": "One cut down the middle, then the middle of what was left. That halving is the whole trick behind binary search.",
+      "learn": {
+        "frame": "The row is sorted but you can only crack a few — so which vault do you hit FIRST?",
+        "reveal": {
+          "concept": "the middle probe",
+          "body": "Cracking the MIDDLE vault told you which half the target sits in — so one try wiped out the other half. Always start at the middle: that's the move everything else is built on.",
+          "inTheWild": "the 'higher or lower' guessing game — the fastest player always guesses the middle number."
+        }
+      }
     },
     "halving": {
       "title": "Cut It in Half",
@@ -27,6 +35,15 @@
       "winText": "You threw away half the vaults with every crack — twelve narrowed to one in a handful of tries. That's logarithmic speed.",
       "failText": {
         "not-halving": "You found it, but you crept along one vault at a time. Crack the MIDDLE of the remaining range each try and it collapses in half every step."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Every crack landed on the middle of the LIVE range, so twelve became six became three. Cutting what's left in half each try is what makes the search fast.",
+          "inTheWild": "log₂(n) tries: a thousand vaults cracked in ten, a million in twenty."
+        },
+        "insights": {
+          "not-halving": "Creeping vault by vault still finds the loot — but that's a linear sweep, n tries. Halving is the whole point: each cut discards half the row, turning n into log n. Give that up and sorted vaults bought you nothing."
+        }
       }
     },
     "trust-clues": {
@@ -35,6 +52,15 @@
       "winText": "You believed the clues and never re-opened a dimmed vault. Every probe should live inside the range the feedback leaves alive.",
       "failText": {
         "ignored-feedback": "You cracked a vault the clues had already ruled out — a wasted try. Once a side is dimmed, the target CANNOT be there. Stay inside the live range."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Each 'higher/lower' clue killed an entire side of the row, and you only ever probed what was still lit. Using the clue to throw away half is what keeps the range shrinking.",
+          "inTheWild": "git bisect, a database index seek — each comparison says which side to keep and which to drop."
+        },
+        "insights": {
+          "ignored-feedback": "The clue isn't a hint, it's a guarantee: sorted order proves the target is on one exact side. Re-cracking a dimmed vault re-searches space you already ruled out — the feedback is the only thing that makes halving legal."
+        }
       }
     },
     "boss-vault": {
@@ -44,12 +70,30 @@
       "failText": {
         "not-halving": "Too many tries — you didn't halve hard enough. Sixteen vaults needs only four perfect cuts.",
         "ignored-feedback": "You opened a ruled-out vault under pressure. Trust every clue — it's what makes four tries enough."
+      },
+      "learn": {
+        "frame": "Both halves now, no hints on-screen: split the row in half AND obey every clue — what does that add up to?",
+        "reveal": {
+          "concept": "binary search",
+          "body": "Middle to split, the clue to pick the surviving side, repeat — sixteen vaults collapse to one in four cuts. Halving driven by the feedback, all the way down, IS binary search.",
+          "inTheWild": "std::lower_bound, a DB index seek, git bisect — every one is halve-then-follow-the-comparison."
+        },
+        "insights": {
+          "not-halving": "The halving is the speed: four cracks only reach sixteen vaults if each one throws away half the row. Slide instead of cut and four tries can't cover it.",
+          "ignored-feedback": "The feedback is what makes each cut valid — it proves which half to drop. Ignore it and you're halving blind, with no guarantee the loot is even in the side you kept."
+        }
       }
     },
     "narrow-drill": {
       "title": "SIDE-QUEST · Narrow It Down",
       "hook": "Let's drill ONE reflex until it's automatic: after every crack, jump to the MIDDLE of whatever's still lit. Eight vaults, go.",
-      "winText": "Middle, middle, middle — you cut the range in half every single time. That reflex IS binary search."
+      "winText": "Middle, middle, middle — you cut the range in half every single time. That reflex IS binary search.",
+      "learn": {
+        "reveal": {
+          "body": "After each crack you jumped straight to the middle of the lit range — nothing fancier. Middle, middle, middle until one vault is left is the engine underneath it all.",
+          "inTheWild": "the one line at the heart of it: mid = lo + (hi − lo) / 2, every iteration."
+        }
+      }
     }
   }
 }

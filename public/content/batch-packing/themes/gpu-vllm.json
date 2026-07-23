@@ -20,7 +20,15 @@
     "warmup": {
       "title": "One GPU, Many Requests",
       "hook": "A naive server runs ONE request at a time. Your GPU can hold several at once — drop them into a single batch and it serves them together in one pass.",
-      "winText": "Batched together, the GPU did in one pass what a naive server needs three for. That single idea is most of vLLM's speed."
+      "winText": "Batched together, the GPU did in one pass what a naive server needs three for. That single idea is most of vLLM's speed.",
+      "learn": {
+        "frame": "The GPU can hold several requests at once — so why would a server ever run them one at a time?",
+        "reveal": {
+          "concept": "batching",
+          "body": "Every forward pass pays a big fixed cost — launched once whether it carries one request or many. Group them into a single batch and that cost is paid ONCE for all of them. That's BATCHING.",
+          "inTheWild": "vLLM pushes many prompts through one forward pass — the fixed GPU cost amortized across the whole batch."
+        }
+      }
     },
     "pack-tight": {
       "title": "Keep the GPU Full",
@@ -29,6 +37,16 @@
       "failText": {
         "underutilize": "You spread the requests too thin — the GPU sat idle between tiny batches. Pack each batch fuller and the batch count drops.",
         "overcommit": "That batch asked for more VRAM than the GPU has — an out-of-memory. Move a request to another batch."
+      },
+      "learn": {
+        "reveal": {
+          "body": "The GPU idled between thin batches because each pass costs the same no matter how full it is. Packing to the brim spreads that fixed cost over more requests — fewer, fuller passes. That's higher THROUGHPUT.",
+          "inTheWild": "Continuous batching keeps the GPU saturated — new requests slot into a running batch instead of waiting their turn."
+        },
+        "insights": {
+          "underutilize": "The pass pays its fixed launch cost whether it carries one request or eight. A thin batch spreads that over too few, so cost-per-request stays high — full batches are what amortize it.",
+          "overcommit": "VRAM is a hard wall, not a target. One block over and the batch won't launch at all, so overpacking buys nothing — pack up to the line, then split into another batch."
+        }
       }
     },
     "respect-memory": {
@@ -38,6 +56,16 @@
       "failText": {
         "underutilize": "Fewer, fuller batches would serve these faster — the GPU idled. But mind the ceiling as you pack.",
         "overcommit": "A batch blew past VRAM. When a request is large, give it room — split the batch so nothing overflows."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Pack tight, but VRAM is a hard ceiling — a batch can't hold more blocks than the GPU has. The move is to fill each batch right up to the limit and no further.",
+          "inTheWild": "PagedAttention pages the KV-cache into fixed blocks, so vLLM can pack VRAM to the edge without overflowing."
+        },
+        "insights": {
+          "underutilize": "Unused VRAM is throughput left on the table — the pass runs either way, so blocks you didn't fill are requests you didn't serve this round.",
+          "overcommit": "Exceeding VRAM doesn't slow the batch, it kills it — an OOM drops the whole thing. The ceiling is the real constraint: pack up to it, never through it."
+        }
       }
     },
     "boss-serve": {
@@ -47,12 +75,30 @@
       "failText": {
         "underutilize": "Too many batches — the GPU idled and the queue backed up. Pack the batches fuller.",
         "overcommit": "A batch overflowed VRAM. Rebalance the requests so each batch fits under the ceiling."
+      },
+      "learn": {
+        "frame": "Fewer batches means more throughput, but too big a batch OOMs — so where exactly does the best batch sit?",
+        "reveal": {
+          "concept": "throughput",
+          "body": "Maximum THROUGHPUT lives at the tightest packing the VRAM ceiling allows — one block under the limit, never over. Too loose wastes the GPU; too tight overflows it. The win is right at the edge.",
+          "inTheWild": "A vLLM scheduler does exactly this every step — pack VRAM to the max, stay memory-safe, keep the queue moving."
+        },
+        "insights": {
+          "underutilize": "Fixed launch cost per pass means fewer, fuller batches always win — an idle GPU is throughput you can't get back.",
+          "overcommit": "The memory ceiling is absolute: a single batch over the line OOMs and serves nothing. Peak throughput sits right below the limit, never above it."
+        }
       }
     },
     "batch-drill": {
       "title": "SIDE-QUEST · Fill One Batch",
       "hook": "Drill the core habit: three small requests, one batch, VRAM enough for all of them. Put them ALL in batch 1.",
-      "winText": "All three in a single batch — the maximum-throughput move. Batch first, always."
+      "winText": "All three in a single batch — the maximum-throughput move. Batch first, always.",
+      "learn": {
+        "reveal": {
+          "body": "When everything fits, one batch is always the move — one pass, fixed cost paid once, every request served together. Batch first.",
+          "inTheWild": "The default instinct in any throughput system: group the work before you run it."
+        }
+      }
     }
   }
 }

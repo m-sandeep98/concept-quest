@@ -54,7 +54,9 @@ schema/graph.schema.json      JSON Schema for authored graphs
 **Data flow:** `App` → `contentLoader` loads `public/content/<domain>/graph.json` + a theme →
 `getModule(node.shape)` → the archetype's `component` renders behind `GameProps`. A play-state emits
 `onSignal(tag)`; `progress.ts` counts signals against `node.failureModes` and surfaces a gap
-(existing sidequest node) or a `generate:` ticket to the server.
+(existing sidequest node) or a `generate:` ticket to the server. Around the game, `GameHost` sequences
+optional per-`ThemeNode` `learn` beats — a `frame → play → reveal` loop that primes the question, then
+names the abstract concept after the win; absent beats degrade to today's straight-to-play behavior.
 
 ### HARD RULES (verified to hold today — keep them holding)
 
@@ -95,7 +97,10 @@ data rides in `ThemeNode.extra` (the shell ignores it; your archetype interprets
 ## Recipe: add a theme (same graph, new subject)
 
 Drop `public/content/<domain>/themes/<name>.json` implementing `Theme` — one `ThemeNode` per graph
-node. No code changes. This is the core bet: one engine + one graph teaches a different subject.
+node. No code changes. This is the core bet: one engine + one graph teaches a different subject. Each
+`ThemeNode` may also carry optional `learn` beats (`{frame?, reveal:{concept?, body, inTheWild?},
+insights?}`) that the shell sequences as a `frame → play → reveal` loop around the game — all optional,
+authored in the theme's language, and safely absent by default.
 
 ## Navigating the code graph (graphify)
 

@@ -21,7 +21,15 @@
     "intro-return": {
       "title": "The Returning Gem",
       "hook": "A spell doesn't just go down — it hands its result back UP, room by room. Cast it and watch the value return.",
-      "winText": "n hit 0, the wizard grabbed 💎, and it returned all the way back up the well. That return trip is recursion 'unwinding'."
+      "winText": "n hit 0, the wizard grabbed 💎, and it returned all the way back up the well. That return trip is recursion 'unwinding'.",
+      "learn": {
+        "frame": "A spell that dives down has to climb back — so where does its answer actually come from?",
+        "reveal": {
+          "concept": "unwinding",
+          "body": "Each room paused, waiting on the room below it. Grabbing 💎 at the bottom let them finish in reverse — deepest first. That climb back up is the call stack UNWINDING.",
+          "inTheWild": "Every recursive call is a paused frame; answers flow back up as each one returns."
+        }
+      }
     },
     "base-case": {
       "title": "The Place to Stop",
@@ -29,6 +37,15 @@
       "winText": "The STOP block caught n = 0 — treasure grabbed, spell unwinds home. That stop is the BASE CASE.",
       "failText": {
         "missing-base-case": "No STOP block. The wizard fell past the bottom into the endless dark — STACK OVERFLOW. Every recursion needs a base case."
+      },
+      "learn": {
+        "reveal": {
+          "body": "The STOP gave the spell one room where it does NOT descend again. Without a single non-recursive answer, nothing ever returns. That room is the BASE CASE.",
+          "inTheWild": "factorial(0) = 1, an empty list, a tree leaf — one case answered without recursing."
+        },
+        "insights": {
+          "missing-base-case": "A recursive spell keeps calling itself; the base case is the one branch that returns WITHOUT calling again. It's the only thing that can end the chain."
+        }
       }
     },
     "recursive-case": {
@@ -37,6 +54,15 @@
       "winText": "Each cast shrank n by one until STOP fired. Shrinking toward the base case is the RECURSIVE CASE.",
       "failText": {
         "no-progress": "Your DESCEND cast on the SAME room (n), so n never shrank and n = 0 never came. The recursive call must move toward the base case."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Every DESCEND handed down a SMALLER room, n − 1, so the spell crept toward STOP at n = 0. Shrinking the problem each call is the RECURSIVE CASE.",
+          "inTheWild": "sum a shorter list, walk a child node, n − 1 — the recursive call always takes a smaller version."
+        },
+        "insights": {
+          "no-progress": "The base case can only fire if the input keeps shrinking toward it. A call that passes the same problem down makes no progress — the exit is never reached."
+        }
       }
     },
     "boss-descent": {
@@ -46,6 +72,18 @@
       "failText": {
         "missing-base-case": "No STOP — it fell forever. STACK OVERFLOW.",
         "no-progress": "It never shrank toward n = 0 — infinite descent."
+      },
+      "learn": {
+        "frame": "Both halves now, no hints: what has to be true for a spell to fall all the way down AND return all the way up?",
+        "reveal": {
+          "concept": "recursion",
+          "body": "A STOP that answers at the bottom, plus a DESCEND that shrinks toward it — together that's the whole shape. Base case to end + recursive case that moves toward it IS recursion.",
+          "inTheWild": "Every recursive function is these two parts: the case it answers directly, and the case that recurses on something smaller."
+        },
+        "insights": {
+          "missing-base-case": "The base case is what makes the return trip possible — no bottom means no unwinding, just a stack that grows until it overflows.",
+          "no-progress": "The recursive case is the bridge to the base case; if it never shrinks the problem, the base case might as well not be there."
+        }
       }
     },
     "bottomless-pit": {
@@ -54,6 +92,15 @@
       "winText": "STOP placed, pit escaped. The base case is the exit door — no recursion is safe without it.",
       "failText": {
         "missing-base-case": "Still no STOP — still falling. The base case has to be checked BEFORE the descend."
+      },
+      "learn": {
+        "reveal": {
+          "body": "One STOP, checked first, and the falling ends. The base case is really just the question 'am I already done?' — asked before you descend again.",
+          "inTheWild": "if (n === 0) return — the guard at the very top of almost every recursive function."
+        },
+        "insights": {
+          "missing-base-case": "The base case is a decision, not an afterthought: each call asks 'am I done?' at the START and only descends if the answer is no."
+        }
       }
     },
     "heal-recursive-case": {
@@ -62,6 +109,15 @@
       "winText": "n went 2 → 1 → 0, and STOP fired at the bottom. A recursive step that shrinks n toward the base case IS the RECURSIVE CASE — that's the whole trick.",
       "failText": {
         "no-progress": "Your step re-cast on the SAME room (n stayed 2), so it never shrank and n = 0 never arrived — the well overflowed. The recursive case has to hand a SMALLER problem to the next call."
+      },
+      "learn": {
+        "reveal": {
+          "body": "n went 2 → 1 → 0 because each step re-cast on a SMALLER room. That steady shrink toward the base case is the RECURSIVE CASE — the engine that gets you there.",
+          "inTheWild": "recurse on n − 1, on the rest of the list, on the child — always a smaller piece than you got."
+        },
+        "insights": {
+          "no-progress": "There has to be some measure — here, n — that strictly drops every call. That decreasing measure is the proof the recursion actually ends."
+        }
       }
     }
   }

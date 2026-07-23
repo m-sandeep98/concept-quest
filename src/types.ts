@@ -53,6 +53,30 @@ export interface Graph {
 }
 
 // ============================================================================
+// Learning-loop beats — optional narration the SHELL sequences around the game.
+// All fields optional; the shell degrades to today's behavior when absent.
+// Authored per theme node (speaks the theme's language for concreteness fading).
+// ============================================================================
+
+export interface LearnReveal {
+  /** The abstract idea the concrete level just enacted. Defaults to the node's `concept`. */
+  concept?: string;
+  /** 1–3 short lines bridging the played experience to the abstract concept. */
+  body: string;
+  /** Optional: the same idea "in the wild" — a real-world or code echo. */
+  inTheWild?: string;
+}
+
+export interface LearnBeats {
+  /** FRAME (pre-play): primes the question. When present, the shell shows a brief frame card before the game. */
+  frame?: string;
+  /** REVEAL (post-win): names the pattern, fades concrete → abstract. */
+  reveal?: LearnReveal;
+  /** MICRO-EXPLAIN: signal tag → a short just-in-time explanation, surfaced in the reveal when that gap fired during play. */
+  insights?: Record<string, string>;
+}
+
+// ============================================================================
 // Themes — skins poured over the SAME structural graph. This is what lets one
 // engine + one graph teach different subjects.
 // ============================================================================
@@ -64,6 +88,8 @@ export interface ThemeNode {
   failText?: Record<string, string>;
   /** Archetype-specific per-node theme data (e.g. sequence step labels). The shell ignores it; the archetype interprets it. */
   extra?: Record<string, unknown>;
+  /** Optional learning-loop beats the shell layers around the game (frame/reveal/insights). */
+  learn?: LearnBeats;
 }
 
 export interface Theme {

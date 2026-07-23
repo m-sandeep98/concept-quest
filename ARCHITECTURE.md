@@ -58,6 +58,19 @@ on a 2D **PixiJS** stage where a character acts out the concept. (Honest caveat:
   clones a known-valid node so the loop always closes. The "I don't get this" button is the manual hatch.
   The browser never calls an LLM — authoring is strictly offline.
 
+### The learning loop — shell-sequenced beats (frame → play → reveal)
+
+The shell (`GameHost`) wraps the concrete game with optional pedagogy **without touching any archetype**.
+Each `ThemeNode` may carry a `learn` block — `{frame?, reveal:{concept?, body, inTheWild?}, insights?}` —
+that `GameHost` runs as a small phase machine: an optional **frame** card primes the question, the
+archetype then plays exactly as today, and on its win the shell intercepts to show a **reveal** that names
+the abstract concept. It's content-as-data (hard rule 5) — all narration is authored per theme node, in the
+theme's own language — and it degrades gracefully: un-authored nodes behave exactly as before, no extra
+clicks. The pedagogy is deliberate: **productive failure** (the reveal reflects on the gap signals that
+actually fired during play), **concreteness fading** (the game is the concrete wizard's well; the reveal
+names the abstract recursion), and **just-in-time explanation** (a per-signal `insight` surfaces only when
+that gap fired).
+
 ## 5. Whole-topic authoring — gamify anything
 
 The self-heal loop authors *one node*; the same pipeline, scaled up, authors a *whole domain* from a bare

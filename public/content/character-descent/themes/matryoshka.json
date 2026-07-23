@@ -21,7 +21,15 @@
     "intro-return": {
       "title": "Closing Them Back Up",
       "hook": "Opening dolls is only half of it — once you reach the solid core, you close every shell back up in reverse. Open it and watch them close.",
-      "winText": "You reached the solid core, then closed every doll back up in reverse order. That closing-up is recursion 'unwinding'."
+      "winText": "You reached the solid core, then closed every doll back up in reverse order. That closing-up is recursion 'unwinding'.",
+      "learn": {
+        "frame": "Opening a doll is the easy half — but where does the closing-up come from, and in what order?",
+        "reveal": {
+          "concept": "unwinding",
+          "body": "Every shell you opened stayed in your hands, waiting. Reaching the solid core let them close one at a time — innermost first, outermost last. That reverse close-up is the call stack UNWINDING.",
+          "inTheWild": "Each open doll is a paused call held in memory; they finish in the reverse of the order you opened them."
+        }
+      }
     },
     "base-case": {
       "title": "The Solid Core",
@@ -29,6 +37,15 @@
       "winText": "The STOP recognised the solid core and stopped. That 'smallest, opens-no-further' doll is the BASE CASE.",
       "failText": {
         "missing-base-case": "No STOP — you kept trying to open dolls that were already solid, forever. Every nesting needs a smallest core to stop at."
+      },
+      "learn": {
+        "reveal": {
+          "body": "The STOP marked the solid doll — the one you keep instead of opening. With no 'this opens no further', there's nothing to hand back. That solid doll is the BASE CASE.",
+          "inTheWild": "the empty box, a single item, a tree leaf — the innermost thing you don't open."
+        },
+        "insights": {
+          "missing-base-case": "The base case is the one doll you DON'T open. Without it every doll leads to another, forever — the pile of held-open shells never stops growing."
+        }
       }
     },
     "recursive-case": {
@@ -37,6 +54,15 @@
       "winText": "Each OPEN revealed a smaller doll until the core. Going one size smaller each time is the RECURSIVE CASE.",
       "failText": {
         "no-progress": "Your OPEN put the SAME doll back, so it never got smaller and never reached the core. Each step must go one size down."
+      },
+      "learn": {
+        "reveal": {
+          "body": "Each OPEN gave up a strictly SMALLER doll, so you edged toward the solid core. Making the thing one size smaller every step is the RECURSIVE CASE.",
+          "inTheWild": "each call works on a smaller piece — a shorter list, a child folder, the doll one size down."
+        },
+        "insights": {
+          "no-progress": "The core is reachable only if every open yields something smaller. Put the same doll back and you never approach it — the nesting can't resolve."
+        }
       }
     },
     "boss-descent": {
@@ -46,6 +72,18 @@
       "failText": {
         "missing-base-case": "No STOP — you opened forever. There is no smaller doll than the core.",
         "no-progress": "It never went smaller — you opened the same doll again and again."
+      },
+      "learn": {
+        "frame": "Nothing set. What two things must a doll have so it opens all the way in AND closes all the way back up?",
+        "reveal": {
+          "concept": "recursion",
+          "body": "A solid core to stop at, plus an OPEN that reveals something smaller each time — that pairing is the whole idea. Base case to end + recursive case that shrinks toward it IS recursion.",
+          "inTheWild": "the same two parts everywhere: the piece you handle directly, and the piece you break into something smaller."
+        },
+        "insights": {
+          "missing-base-case": "The core is what turns the process around; with no innermost stop there's nothing to close back up from, only endless opening.",
+          "no-progress": "A core you never reach is no help — the shrinking is what carries each open toward it; skip it and the base case stays out of reach."
+        }
       }
     },
     "bottomless-pit": {
@@ -54,6 +92,15 @@
       "winText": "STOP placed — you recognise the solid core now. The base case is what ends the nesting.",
       "failText": {
         "missing-base-case": "Still no STOP — still opening forever. The core has to be checked BEFORE you open again."
+      },
+      "learn": {
+        "reveal": {
+          "body": "One STOP that spots the solid doll, and the opening ends. The base case is simply asking 'is this one solid?' before you try to open again.",
+          "inTheWild": "the check at the top of the routine: if it's already smallest, keep it and return."
+        },
+        "insights": {
+          "missing-base-case": "The 'is it solid?' test comes FIRST, before any open — that's what lets the smallest doll end the nesting instead of being cracked open too."
+        }
       }
     },
     "heal-recursive-case": {
@@ -62,6 +109,15 @@
       "winText": "Each OPEN gave up a smaller doll — size 2 → 1 → core — until it stopped. Going exactly one size smaller each time is the RECURSIVE CASE.",
       "failText": {
         "no-progress": "Your step kept opening the SAME-size doll, so it never got smaller and never reached the core — it just piled up forever. The recursive case must pass a smaller doll inward."
+      },
+      "learn": {
+        "reveal": {
+          "body": "size 2 → 1 → core, because each OPEN gave up a doll one size smaller. That steady step-down toward the core is the RECURSIVE CASE.",
+          "inTheWild": "always hand inward something smaller than you got — one size down, one item fewer."
+        },
+        "insights": {
+          "no-progress": "There has to be some measure — here, the doll's size — that drops by at least one every open. That shrinking measure is what guarantees you reach the core."
+        }
       }
     }
   }
