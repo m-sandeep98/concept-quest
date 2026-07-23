@@ -21,7 +21,7 @@ export function buildPrompt(ticket, refs, manifests) {
     ``,
     `Rules:`,
     `- node.level MUST be structurally valid for shape "${graph.shape}" and SOLVABLE.`,
-    `- Every theme entry needs: title, hook, winText, and failText (keys matching the failure tags shown in the examples).`,
+    `- Every theme entry needs: title, hook, winText, and failText (keys matching the failure tags shown in the examples). A theme entry MAY also optionally carry a learn:{frame?,reveal:{concept?,body,inTheWild?},insights?} block (optional — omit if unsure).`,
     `- ${manifests?.[graph.shape]?.drillLevelFormat ?? `node.level must match the "${graph.shape}" archetype's level format (mirror the EXAMPLE below).`}`,
     `- Anything referenced in themes (step ids / blocks) must exist in node.level.`,
     ``,
@@ -157,7 +157,7 @@ export function pTheme(concept, ex, shape, graph, manifest, lastErr) {
     `Write ONLY the raw JSON for ONE theme.json of the archetype "${shape}". The SUBJECT is the concept itself: "${concept}".`,
     `=== EXAMPLE theme.json (batch-packing) ===`,
     ex.theme,
-    `RULES: {"id":"<themeId>","label":"<short>","subject":"<subject>","bossHook":"<one line>","vocab":{...archetype vocab...},"visual":{"accent":"#RRGGBB","actorIcon":"<emoji>"},"nodes":{...}}. "nodes" MUST include an entry for EVERY node id: ${ids}. Each entry = {title, hook, winText, failText?} where failText keys are the signal tags: ${tags}. Keep text short.`,
+    `RULES: {"id":"<themeId>","label":"<short>","subject":"<subject>","bossHook":"<one line>","vocab":{...archetype vocab...},"visual":{"accent":"#RRGGBB","actorIcon":"<emoji>"},"nodes":{...}}. "nodes" MUST include an entry for EVERY node id: ${ids}. Each entry = {title, hook, winText, failText?} where failText keys are the signal tags: ${tags}; an entry MAY also optionally include learn:{frame?,reveal:{concept?,body,inTheWild?},insights?} (optional). Keep text short.`,
     `Output ONLY the raw theme JSON — no prose, no fences.`,
     fixNote(lastErr),
   ].join("\n");

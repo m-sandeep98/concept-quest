@@ -52,6 +52,10 @@ repurposed. See Anthropic's [Usage Policy](https://www.anthropic.com/legal/aup) 
 
 ## Play the loop
 
+Each level runs a short **frame → play → reveal** arc: an optional *frame* card primes the question, you
+*play* the concrete level, and after the win a *reveal* names the abstract concept (and reflects on where
+you stumbled). Both narration beats are authored per theme and optional — a bare node goes straight to play.
+
 1. Climb the ladder from the base (return value → base case → recursive case → **BOSS**).
 2. In each level you **build a rule from blocks** (a STOP / base case + a DESCEND / recursive step),
    hit run, and **watch it execute** — the well nests deeper, the call stack grows, then it unwinds.
